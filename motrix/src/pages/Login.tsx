@@ -7,6 +7,9 @@ const DELETE_SPEED_MS = 40
 const PAUSE_AFTER_TYPE_MS = 2000
 const PAUSE_AFTER_DELETE_MS = 500
 
+const VALID_EMAIL = 'admin'
+const VALID_PASSWORD = 'admin'
+
 const inputClassName =
   'block w-full ps-9 py-2.5 bg-neutral-secondary-medium border border-default-medium text-heading text-sm rounded-base focus:ring-brand focus:border-brand shadow-xs placeholder:text-body'
 
@@ -14,11 +17,22 @@ export default function Login() {
   const navigate = useNavigate()
   const [showPassword, setShowPassword] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
+  const [error, setError] = useState('')
 
   async function handleSubmit(event: SubmitEvent<HTMLFormElement>) {
     event.preventDefault()
     if (isLoading) return
 
+    const formData = new FormData(event.currentTarget)
+    const email = String(formData.get('email') ?? '').trim()
+    const password = String(formData.get('password') ?? '')
+
+    if (email !== VALID_EMAIL || password !== VALID_PASSWORD) {
+      setError('Email ou senha inválidos.')
+      return
+    }
+
+    setError('')
     setIsLoading(true)
     try {
       await import('./Dashboard.tsx')
@@ -88,12 +102,16 @@ export default function Login() {
                 </svg>
               </div>
               <input
-                type="email"
+                type="text"
                 id="email"
+                name="email"
                 required
-                autoComplete="email"
+                autoComplete="username"
+                aria-invalid={error ? true : undefined}
+                aria-describedby={error ? 'login-error' : undefined}
+                onChange={() => setError('')}
                 className={`${inputClassName} pe-3`}
-                placeholder="nome@exemplo.com"
+                placeholder="Digite seu email aqui..."
               />
             </div>
           </div>
@@ -130,8 +148,12 @@ export default function Login() {
               <input
                 type={showPassword ? 'text' : 'password'}
                 id="password"
+                name="password"
                 required
                 autoComplete="current-password"
+                aria-invalid={error ? true : undefined}
+                aria-describedby={error ? 'login-error' : undefined}
+                onChange={() => setError('')}
                 className={`${inputClassName} pe-10`}
                 placeholder="••••••••"
               />
@@ -182,6 +204,12 @@ export default function Login() {
               </button>
             </div>
           </div>
+
+          {error && (
+            <p id="login-error" role="alert" className="text-sm font-medium text-red-600">
+              {error}
+            </p>
+          )}
 
           <button
             type="submit"
