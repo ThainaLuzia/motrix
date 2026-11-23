@@ -63,9 +63,9 @@ export default function CategoryCard({ category, onOpen }: CategoryCardProps) {
       aria-label={`${category.name}, ${countLabel}`}
       style={{ backgroundColor: getCategoryColor(category.name) }}
       // No Tailwind v4, hover: só vale em dispositivos com hover real, então o efeito não fica preso após o toque.
-      className="relative flex aspect-square w-full items-center justify-center overflow-hidden p-4 text-white border border-white/10 rounded-base shadow-xs cursor-pointer select-none [-webkit-tap-highlight-color:transparent] transition-transform duration-200 ease-out hover:scale-105 hover:shadow-lg active:scale-95 active:duration-100 focus:outline-none focus-visible:ring-4 focus-visible:ring-brand-medium motion-reduce:transition-none"
+      className="relative flex aspect-[3/2] w-full items-center justify-center overflow-hidden p-4 text-white border border-white/10 rounded-base shadow-xs cursor-pointer select-none [-webkit-tap-highlight-color:transparent] transition-transform duration-200 ease-out hover:scale-105 hover:shadow-lg active:scale-95 active:duration-100 focus:outline-none focus-visible:ring-4 focus-visible:ring-brand-medium motion-reduce:transition-none"
     >
-      <span className="line-clamp-3 max-w-full text-center text-base font-semibold leading-tight break-words sm:text-lg">
+      <span className="line-clamp-2 max-w-full text-center text-base font-semibold leading-tight break-words sm:text-lg">
         {category.name}
       </span>
       <span
