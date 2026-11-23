@@ -68,6 +68,12 @@
     box-sizing: border-box;
   }
 
+  @media (prefers-color-scheme: light) {
+    :root:has(#dashboard) {
+      --bg: var(--color-neutral-tertiary-soft);
+    }
+  }
+
   #root:has(#dashboard) {
     border-inline: none;
   }
