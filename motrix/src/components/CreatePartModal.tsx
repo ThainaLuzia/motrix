@@ -475,6 +475,72 @@ export default function CreatePartModal({
   const requiresDamageDescription =
     form.condition === 'usada-com-avaria' || form.condition === 'para-recuperar'
 
+  /**
+   * Área de envio de fotos. Sem fotos ela ocupa a largura toda; com fotos vira
+   * um card do mesmo tamanho das fotos, logo depois delas.
+   */
+  function renderPhotoDropzone(compact: boolean) {
+    return (
+      <label
+        htmlFor="part-photos"
+        onDragOver={(event) => {
+          event.preventDefault()
+          setIsDraggingPhotos(true)
+        }}
+        onDragLeave={() => setIsDraggingPhotos(false)}
+        onDrop={handlePhotoDrop}
+        className={`flex flex-col items-center justify-center w-full border border-dashed rounded-base cursor-pointer hover:bg-neutral-tertiary-medium ${
+          compact ? 'flex-1 min-h-40 px-3' : 'h-64'
+        } ${
+          isDraggingPhotos
+            ? 'bg-neutral-tertiary-medium border-brand'
+            : 'bg-neutral-secondary-medium border-default-strong'
+        }`}
+      >
+        <div className={`flex flex-col items-center justify-center text-center text-body ${compact ? 'py-4' : 'pt-5 pb-6'}`}>
+          <svg
+            className={compact ? 'w-7 h-7 mb-2' : 'w-8 h-8 mb-4'}
+            aria-hidden="true"
+            xmlns="http://www.w3.org/2000/svg"
+            width="24"
+            height="24"
+            fill="none"
+            viewBox="0 0 24 24"
+          >
+            <path
+              stroke="currentColor"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth="2"
+              d="M15 17h3a3 3 0 0 0 0-6h-.025a5.56 5.56 0 0 0 .025-.5A5.5 5.5 0 0 0 7.207 9.021C7.137 9.017 7.071 9 7 9a4 4 0 1 0 0 8h2.167M12 19v-9m0 0-2 2m2-2 2 2"
+            />
+          </svg>
+          {compact ? (
+            <>
+              <p className="text-sm font-semibold">Adicionar fotos</p>
+              <p className="mt-1 text-xs">Clique ou arraste</p>
+            </>
+          ) : (
+            <>
+              <p className="mb-2 text-sm">
+                <span className="font-semibold">Clique para enviar</span> ou arraste e solte
+              </p>
+              <p className="text-xs">PNG, JPG, WEBP ou GIF — pode selecionar várias fotos</p>
+            </>
+          )}
+        </div>
+        <input
+          id="part-photos"
+          type="file"
+          accept="image/*"
+          multiple
+          onChange={handlePhotoInput}
+          className="hidden"
+        />
+      </label>
+    )
+  }
+
   return (
     <dialog
       ref={dialogRef}
@@ -897,58 +963,11 @@ export default function CreatePartModal({
             <legend className={legendClassName}>
               Fotos <span className="text-sm font-normal text-body">— opcional</span>
             </legend>
-            <div className="flex items-center justify-center w-full">
-              <label
-                htmlFor="part-photos"
-                onDragOver={(event) => {
-                  event.preventDefault()
-                  setIsDraggingPhotos(true)
-                }}
-                onDragLeave={() => setIsDraggingPhotos(false)}
-                onDrop={handlePhotoDrop}
-                className={`flex flex-col items-center justify-center w-full h-64 border border-dashed rounded-base cursor-pointer hover:bg-neutral-tertiary-medium ${
-                  isDraggingPhotos
-                    ? 'bg-neutral-tertiary-medium border-brand'
-                    : 'bg-neutral-secondary-medium border-default-strong'
-                }`}
-              >
-                <div className="flex flex-col items-center justify-center text-body pt-5 pb-6">
-                  <svg
-                    className="w-8 h-8 mb-4"
-                    aria-hidden="true"
-                    xmlns="http://www.w3.org/2000/svg"
-                    width="24"
-                    height="24"
-                    fill="none"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      stroke="currentColor"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth="2"
-                      d="M15 17h3a3 3 0 0 0 0-6h-.025a5.56 5.56 0 0 0 .025-.5A5.5 5.5 0 0 0 7.207 9.021C7.137 9.017 7.071 9 7 9a4 4 0 1 0 0 8h2.167M12 19v-9m0 0-2 2m2-2 2 2"
-                    />
-                  </svg>
-                  <p className="mb-2 text-sm">
-                    <span className="font-semibold">Clique para enviar</span> ou arraste e solte
-                  </p>
-                  <p className="text-xs">PNG, JPG, WEBP ou GIF — pode selecionar várias fotos</p>
-                </div>
-                <input
-                  id="part-photos"
-                  type="file"
-                  accept="image/*"
-                  multiple
-                  onChange={handlePhotoInput}
-                  className="hidden"
-                />
-              </label>
-            </div>
+            {photos.length === 0 && renderPhotoDropzone(false)}
 
             {photos.length > 0 && (
               <ul
-                className="mt-4 grid grid-cols-2 gap-4 sm:grid-cols-3"
+                className="grid grid-cols-2 gap-4 sm:grid-cols-3"
                 aria-label="Fotos selecionadas"
               >
                 {photos.map((photo, index) => (
@@ -991,6 +1010,7 @@ export default function CreatePartModal({
                     </button>
                   </li>
                 ))}
+                <li className="flex">{renderPhotoDropzone(true)}</li>
               </ul>
             )}
           </fieldset>
