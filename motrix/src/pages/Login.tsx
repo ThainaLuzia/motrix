@@ -11,7 +11,7 @@ const VALID_EMAIL = 'admin'
 const VALID_PASSWORD = 'admin'
 
 const inputClassName =
-  'block w-full ps-9 py-2.5 bg-neutral-secondary-medium border border-default-medium text-heading text-sm rounded-base focus:ring-brand focus:border-brand shadow-xs placeholder:text-body'
+  'block w-full ps-9 py-2.5 bg-neutral-secondary-medium border border-default-strong text-heading text-sm rounded-base focus:ring-brand focus:border-brand shadow-xs placeholder:text-body'
 
 export default function Login() {
   const navigate = useNavigate()
@@ -206,7 +206,7 @@ export default function Login() {
           </div>
 
           {error && (
-            <p id="login-error" role="alert" className="text-sm font-medium text-red-600">
+            <p id="login-error" role="alert" className="text-sm font-medium text-red-400">
               {error}
             </p>
           )}

@@ -55,7 +55,7 @@ export default function Dashboard() {
                 aria-haspopup="listbox"
                 aria-expanded={isDropdownOpen}
                 aria-controls="dropdown"
-                className="inline-flex h-full items-center z-10 text-body bg-neutral-secondary-medium box-border border border-default-medium hover:bg-neutral-tertiary-medium hover:text-heading focus:ring-4 focus:ring-neutral-tertiary font-medium leading-5 rounded-s-base text-sm px-4 py-2.5 focus:outline-none cursor-pointer"
+                className="inline-flex h-full items-center z-10 text-body bg-neutral-secondary-medium box-border border border-default-strong hover:bg-neutral-tertiary-medium hover:text-heading focus:ring-4 focus:ring-neutral-tertiary font-medium leading-5 rounded-s-base text-sm px-4 py-2.5 focus:outline-none cursor-pointer"
               >
                 <svg
                   className="w-4 h-4 me-1.5"
@@ -96,7 +96,7 @@ export default function Dashboard() {
               {isDropdownOpen && (
                 <div
                   id="dropdown"
-                  className="absolute start-0 top-full mt-1 z-20 bg-neutral-primary-medium border border-default-medium rounded-base shadow-lg w-44"
+                  className="absolute start-0 top-full mt-1 z-20 bg-neutral-primary-medium border border-default-strong rounded-base shadow-lg w-44"
                 >
                   <ul
                     role="listbox"
@@ -126,7 +126,7 @@ export default function Dashboard() {
               id="search-dropdown"
               name="search"
               required
-              className="px-3 py-2.5 bg-neutral-secondary-medium border border-default-medium text-heading text-sm focus:ring-brand focus:border-brand block w-full placeholder:text-body"
+              className="px-3 py-2.5 bg-neutral-secondary-medium border border-default-strong text-heading text-sm focus:ring-brand focus:border-brand block w-full placeholder:text-body"
               placeholder="Buscar peças..."
             />
             <button
