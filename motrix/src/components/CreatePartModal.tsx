@@ -186,6 +186,21 @@ export default function CreatePartModal({
     }
   }, [open])
 
+  // Trava a rolagem da página atrás do modal enquanto ele estiver aberto.
+  useEffect(() => {
+    if (!open) return
+    const root = document.documentElement
+    const { overflow, paddingRight } = root.style
+    // Compensa a largura da barra de rolagem da página para o conteúdo não "pular".
+    const scrollbarWidth = window.innerWidth - root.clientWidth
+    root.style.overflow = 'hidden'
+    if (scrollbarWidth > 0) root.style.paddingRight = `${scrollbarWidth}px`
+    return () => {
+      root.style.overflow = overflow
+      root.style.paddingRight = paddingRight
+    }
+  }, [open])
+
   function update<K extends keyof FormState>(field: K, value: FormState[K]) {
     setForm((current) => ({ ...current, [field]: value }))
     setError('')
@@ -293,10 +308,10 @@ export default function CreatePartModal({
       ref={dialogRef}
       onClose={onClose}
       aria-labelledby="create-part-title"
-      className="m-auto w-[calc(100%-2rem)] max-w-3xl max-h-[90svh] p-0 text-start bg-neutral-primary-medium border border-default-strong rounded-base shadow-lg backdrop:bg-black/60"
+      className="m-auto w-[calc(100%-2rem)] max-w-3xl max-h-[90svh] overflow-hidden open:flex open:flex-col p-0 text-start bg-neutral-primary-medium border border-default-strong rounded-base shadow-lg backdrop:bg-black/60"
     >
-      <form className="flex max-h-[90svh] flex-col" onSubmit={handleSubmit}>
-        <div className="flex items-center justify-between gap-4 border-b border-default-strong px-4 py-4 sm:px-6">
+      <form className="flex min-h-0 flex-1 flex-col" onSubmit={handleSubmit}>
+        <div className="flex shrink-0 items-center justify-between gap-4 border-b border-default-strong px-4 py-4 sm:px-6">
           <h2 id="create-part-title" className="m-0 text-xl font-semibold text-heading">
             Criar peça
           </h2>
@@ -324,7 +339,7 @@ export default function CreatePartModal({
           </button>
         </div>
 
-        <div className="flex-1 space-y-8 overflow-y-auto px-4 py-6 sm:px-6">
+        <div className="min-h-0 flex-1 space-y-8 overflow-y-auto overscroll-contain px-4 py-6 sm:px-6 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
           <fieldset>
             <legend className={legendClassName}>Identificação</legend>
             <div className={fieldsetClassName}>
@@ -735,7 +750,7 @@ export default function CreatePartModal({
           </fieldset>
         </div>
 
-        <div className="flex flex-col-reverse gap-3 border-t border-default-strong px-4 py-4 sm:flex-row sm:items-center sm:justify-end sm:px-6">
+        <div className="flex shrink-0 flex-col-reverse gap-3 border-t border-default-strong px-4 py-4 sm:flex-row sm:items-center sm:justify-end sm:px-6">
           {error && (
             <p role="alert" className="text-sm font-medium text-red-400 sm:me-auto">
               {error}
