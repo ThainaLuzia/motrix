@@ -1,4 +1,12 @@
-import { useEffect, useRef, useState, type KeyboardEvent, type SubmitEvent } from 'react'
+import {
+  useEffect,
+  useRef,
+  useState,
+  type ChangeEvent,
+  type DragEvent,
+  type KeyboardEvent,
+  type SubmitEvent,
+} from 'react'
 import type {
   Axle,
   BodyType,
@@ -256,6 +264,18 @@ function buildAutoTags(form: FormState) {
   return tags
 }
 
+interface PhotoItem {
+  id: string
+  file: File
+  /** URL temporária (object URL) usada só para a pré-visualização. */
+  url: string
+}
+
+function formatFileSize(bytes: number) {
+  if (bytes < 1024 * 1024) return `${Math.max(1, Math.round(bytes / 1024))} KB`
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`
+}
+
 interface CreatePartModalProps {
   open: boolean
   categories: string[]
@@ -280,6 +300,18 @@ export default function CreatePartModal({
   const [tagInput, setTagInput] = useState('')
   const [tagError, setTagError] = useState('')
   const [error, setError] = useState('')
+  const [photos, setPhotos] = useState<PhotoItem[]>([])
+  const [isDraggingPhotos, setIsDraggingPhotos] = useState(false)
+  const photosRef = useRef<PhotoItem[]>([])
+
+  useEffect(() => {
+    photosRef.current = photos
+  }, [photos])
+
+  // Libera as URLs de pré-visualização quando o componente sai da tela.
+  useEffect(() => {
+    return () => photosRef.current.forEach((photo) => URL.revokeObjectURL(photo.url))
+  }, [])
 
   useEffect(() => {
     const dialog = dialogRef.current
@@ -344,6 +376,36 @@ export default function CreatePartModal({
     setTagError('')
   }
 
+  function addPhotos(files: FileList | null) {
+    if (!files) return
+    const images = Array.from(files).filter((file) => file.type.startsWith('image/'))
+    if (images.length === 0) return
+    setPhotos((current) => [
+      ...current,
+      ...images.map((file) => ({ id: crypto.randomUUID(), file, url: URL.createObjectURL(file) })),
+    ])
+  }
+
+  function removePhoto(id: string) {
+    setPhotos((current) => {
+      const photo = current.find((p) => p.id === id)
+      if (photo) URL.revokeObjectURL(photo.url)
+      return current.filter((p) => p.id !== id)
+    })
+  }
+
+  function handlePhotoInput(event: ChangeEvent<HTMLInputElement>) {
+    addPhotos(event.target.files)
+    // Permite selecionar o mesmo arquivo de novo depois de removê-lo.
+    event.target.value = ''
+  }
+
+  function handlePhotoDrop(event: DragEvent<HTMLLabelElement>) {
+    event.preventDefault()
+    setIsDraggingPhotos(false)
+    addPhotos(event.dataTransfer.files)
+  }
+
   /** Enter em campos auxiliares adiciona o item em vez de enviar o formulário. */
   function onEnter(action: () => void) {
     return (event: KeyboardEvent<HTMLInputElement>) => {
@@ -361,6 +423,9 @@ export default function CreatePartModal({
     setTagInput('')
     setTagError('')
     setError('')
+    photos.forEach((photo) => URL.revokeObjectURL(photo.url))
+    setPhotos([])
+    setIsDraggingPhotos(false)
   }
 
   function handleSubmit(event: SubmitEvent<HTMLFormElement>) {
@@ -400,6 +465,7 @@ export default function CreatePartModal({
       salePrice: toOptionalNumber(form.salePrice),
       status: form.status,
       tags: [...new Set([...autoTags, ...manualTags])],
+      photos: photos.length > 0 ? photos.map((photo) => photo.file) : undefined,
     })
     resetForm()
     onClose()
@@ -824,6 +890,108 @@ export default function CreatePartModal({
               <p id="part-tag-error" role="alert" className="mt-2 text-sm font-medium text-red-400">
                 {tagError}
               </p>
+            )}
+          </fieldset>
+
+          <fieldset>
+            <legend className={legendClassName}>
+              Fotos <span className="text-sm font-normal text-body">— opcional</span>
+            </legend>
+            <div className="flex items-center justify-center w-full">
+              <label
+                htmlFor="part-photos"
+                onDragOver={(event) => {
+                  event.preventDefault()
+                  setIsDraggingPhotos(true)
+                }}
+                onDragLeave={() => setIsDraggingPhotos(false)}
+                onDrop={handlePhotoDrop}
+                className={`flex flex-col items-center justify-center w-full h-64 border border-dashed rounded-base cursor-pointer hover:bg-neutral-tertiary-medium ${
+                  isDraggingPhotos
+                    ? 'bg-neutral-tertiary-medium border-brand'
+                    : 'bg-neutral-secondary-medium border-default-strong'
+                }`}
+              >
+                <div className="flex flex-col items-center justify-center text-body pt-5 pb-6">
+                  <svg
+                    className="w-8 h-8 mb-4"
+                    aria-hidden="true"
+                    xmlns="http://www.w3.org/2000/svg"
+                    width="24"
+                    height="24"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      stroke="currentColor"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth="2"
+                      d="M15 17h3a3 3 0 0 0 0-6h-.025a5.56 5.56 0 0 0 .025-.5A5.5 5.5 0 0 0 7.207 9.021C7.137 9.017 7.071 9 7 9a4 4 0 1 0 0 8h2.167M12 19v-9m0 0-2 2m2-2 2 2"
+                    />
+                  </svg>
+                  <p className="mb-2 text-sm">
+                    <span className="font-semibold">Clique para enviar</span> ou arraste e solte
+                  </p>
+                  <p className="text-xs">PNG, JPG, WEBP ou GIF — pode selecionar várias fotos</p>
+                </div>
+                <input
+                  id="part-photos"
+                  type="file"
+                  accept="image/*"
+                  multiple
+                  onChange={handlePhotoInput}
+                  className="hidden"
+                />
+              </label>
+            </div>
+
+            {photos.length > 0 && (
+              <ul
+                className="mt-4 grid grid-cols-2 gap-4 sm:grid-cols-3"
+                aria-label="Fotos selecionadas"
+              >
+                {photos.map((photo, index) => (
+                  <li
+                    key={photo.id}
+                    className="relative overflow-hidden bg-neutral-secondary-medium border border-default-strong rounded-base shadow-xs"
+                  >
+                    <img
+                      src={photo.url}
+                      alt={`Foto ${index + 1}`}
+                      className="block w-full aspect-[4/3] object-cover"
+                    />
+                    <div className="px-3 py-2">
+                      <p className="truncate text-sm font-medium text-heading" title={photo.file.name}>
+                        {photo.file.name}
+                      </p>
+                      <p className="text-xs text-body">{formatFileSize(photo.file.size)}</p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => removePhoto(photo.id)}
+                      aria-label={`Remover foto ${photo.file.name}`}
+                      className="absolute top-2 end-2 inline-flex items-center justify-center w-8 h-8 text-white bg-black/60 hover:bg-black/80 rounded-base cursor-pointer"
+                    >
+                      <svg
+                        className="w-4 h-4"
+                        aria-hidden="true"
+                        xmlns="http://www.w3.org/2000/svg"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          stroke="currentColor"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth="2"
+                          d="M6 18 17.94 6M18 18 6.06 6"
+                        />
+                      </svg>
+                    </button>
+                  </li>
+                ))}
+              </ul>
             )}
           </fieldset>
         </div>

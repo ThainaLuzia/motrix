@@ -31,4 +31,6 @@ export interface Part {
   status: PartStatus
   /** Tags no formato tipo:valor (ex.: categoria:lataria, posicao:lado-esquerdo). */
   tags: string[]
+  /** Fotos da peça. */
+  photos?: File[]
 }
