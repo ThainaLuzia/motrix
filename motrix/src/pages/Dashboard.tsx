@@ -39,10 +39,11 @@ export default function Dashboard() {
 
   return (
     <section id="dashboard" className="flex flex-1 flex-col px-4 py-8 sm:px-6">
-      <header className="flex flex-col gap-4 sm:flex-row sm:items-center">
-        <h1 className="m-0 text-2xl font-bold">Motrix</h1>
+      {/* Mobile: nome em cima e busca embaixo. A partir de md: 3 colunas com a busca no centro da tela. */}
+      <header className="grid grid-cols-1 items-center gap-4 md:grid-cols-[1fr_minmax(0,42rem)_1fr]">
+        <h1 className="m-0 text-2xl font-bold text-center md:text-start">Motrix</h1>
 
-        <form className="w-full max-w-2xl" onSubmit={handleSearch}>
+        <form className="w-full" onSubmit={handleSearch}>
           <div className="flex shadow-xs rounded-base -space-x-0.5">
             <label htmlFor="search-dropdown" className="sr-only">
               Buscar peças
@@ -55,10 +56,10 @@ export default function Dashboard() {
                 aria-haspopup="listbox"
                 aria-expanded={isDropdownOpen}
                 aria-controls="dropdown"
-                className="inline-flex h-full items-center z-10 text-body bg-neutral-secondary-medium box-border border border-default-strong hover:bg-neutral-tertiary-medium hover:text-heading focus:ring-4 focus:ring-neutral-tertiary font-medium leading-5 rounded-s-base text-sm px-4 py-2.5 focus:outline-none cursor-pointer"
+                className="inline-flex h-full items-center z-10 text-body bg-neutral-secondary-medium box-border border border-default-strong hover:bg-neutral-tertiary-medium hover:text-heading focus:ring-4 focus:ring-neutral-tertiary font-medium leading-5 rounded-s-base text-sm px-3 sm:px-4 py-2.5 focus:outline-none cursor-pointer whitespace-nowrap"
               >
                 <svg
-                  className="w-4 h-4 me-1.5"
+                  className="w-4 h-4 sm:me-1.5"
                   aria-hidden="true"
                   xmlns="http://www.w3.org/2000/svg"
                   width="24"
@@ -74,7 +75,7 @@ export default function Dashboard() {
                     d="M9.143 4H4.857A.857.857 0 0 0 4 4.857v4.286c0 .473.384.857.857.857h4.286A.857.857 0 0 0 10 9.143V4.857A.857.857 0 0 0 9.143 4Zm10 0h-4.286a.857.857 0 0 0-.857.857v4.286c0 .473.384.857.857.857h4.286A.857.857 0 0 0 20 9.143V4.857A.857.857 0 0 0 19.143 4Zm-10 10H4.857a.857.857 0 0 0-.857.857v4.286c0 .473.384.857.857.857h4.286a.857.857 0 0 0 .857-.857v-4.286A.857.857 0 0 0 9.143 14Zm10 0h-4.286a.857.857 0 0 0-.857.857v4.286c0 .473.384.857.857.857h4.286a.857.857 0 0 0 .857-.857v-4.286a.857.857 0 0 0-.857-.857Z"
                   />
                 </svg>
-                {category}
+                <span className="sr-only sm:not-sr-only">{category}</span>
                 <svg
                   className="w-4 h-4 ms-1.5"
                   aria-hidden="true"
@@ -126,15 +127,15 @@ export default function Dashboard() {
               id="search-dropdown"
               name="search"
               required
-              className="px-3 py-2.5 bg-neutral-secondary-medium border border-default-strong text-heading text-sm focus:ring-brand focus:border-brand block w-full placeholder:text-body"
+              className="min-w-0 px-3 py-2.5 bg-neutral-secondary-medium border border-default-strong text-heading text-sm focus:ring-brand focus:border-brand block w-full placeholder:text-body"
               placeholder="Buscar peças..."
             />
             <button
               type="submit"
-              className="inline-flex items-center text-white bg-brand hover:bg-brand-strong box-border border border-transparent focus:ring-4 focus:ring-brand-medium shadow-xs font-medium leading-5 rounded-e-base text-sm px-4 py-2.5 focus:outline-none cursor-pointer"
+              className="inline-flex items-center text-white bg-brand hover:bg-brand-strong box-border border border-transparent focus:ring-4 focus:ring-brand-medium shadow-xs font-medium leading-5 rounded-e-base text-sm px-3 sm:px-4 py-2.5 focus:outline-none cursor-pointer shrink-0"
             >
               <svg
-                className="w-4 h-4 me-1.5"
+                className="w-4 h-4 sm:me-1.5"
                 aria-hidden="true"
                 xmlns="http://www.w3.org/2000/svg"
                 width="24"
@@ -149,7 +150,7 @@ export default function Dashboard() {
                   d="m21 21-3.5-3.5M17 10a7 7 0 1 1-14 0 7 7 0 0 1 14 0Z"
                 />
               </svg>
-              Buscar
+              <span className="sr-only sm:not-sr-only">Buscar</span>
             </button>
           </div>
         </form>
