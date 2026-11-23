@@ -71,6 +71,112 @@ const secondaryButtonClassName =
   'inline-flex items-center justify-center text-body bg-neutral-secondary-medium box-border border border-default-strong hover:bg-neutral-tertiary-medium hover:text-heading focus:ring-4 focus:ring-neutral-tertiary font-medium leading-5 rounded-base text-sm px-4 py-2.5 focus:outline-none cursor-pointer'
 const primaryButtonClassName =
   'inline-flex items-center justify-center text-white bg-brand hover:bg-brand-strong box-border border border-transparent focus:ring-4 focus:ring-brand-medium shadow-xs font-medium leading-5 rounded-base text-sm px-4 py-2.5 focus:outline-none cursor-pointer'
+const dropdownButtonClassName =
+  'flex w-full items-center justify-between gap-2 px-3 py-2.5 bg-neutral-secondary-medium border border-default-strong text-sm text-start rounded-base shadow-xs hover:bg-neutral-tertiary-medium focus:ring-4 focus:ring-brand-medium focus:border-brand focus:outline-none cursor-pointer'
+const dropdownItemClassName =
+  'inline-flex items-center w-full p-2 text-start hover:bg-neutral-tertiary-medium hover:text-heading rounded cursor-pointer'
+
+interface DropdownOption<T extends string> {
+  value: T
+  label: string
+}
+
+interface DropdownProps<T extends string> {
+  id: string
+  value: T
+  options: DropdownOption<T>[]
+  onChange: (value: T) => void
+  placeholder?: string
+}
+
+/** Dropdown no modelo do Flowbite, controlado pelo React (mesmo padrão do Dashboard). */
+function Dropdown<T extends string>({ id, value, options, onChange, placeholder }: DropdownProps<T>) {
+  const [isOpen, setIsOpen] = useState(false)
+  const containerRef = useRef<HTMLDivElement>(null)
+  const buttonRef = useRef<HTMLButtonElement>(null)
+  const menuId = `${id}-menu`
+  const selected = options.find((option) => option.value === value)
+
+  useEffect(() => {
+    if (!isOpen) return
+    function handleClickOutside(event: MouseEvent) {
+      if (!containerRef.current?.contains(event.target as Node)) setIsOpen(false)
+    }
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => document.removeEventListener('mousedown', handleClickOutside)
+  }, [isOpen])
+
+  function close() {
+    setIsOpen(false)
+    buttonRef.current?.focus()
+  }
+
+  function select(option: T) {
+    onChange(option)
+    close()
+  }
+
+  return (
+    <div
+      ref={containerRef}
+      className="relative"
+      onKeyDown={(event) => {
+        // Esc fecha só o dropdown, sem fechar o modal.
+        if (event.key === 'Escape' && isOpen) {
+          event.preventDefault()
+          event.stopPropagation()
+          close()
+        }
+      }}
+    >
+      <button
+        ref={buttonRef}
+        id={id}
+        type="button"
+        onClick={() => setIsOpen((v) => !v)}
+        aria-haspopup="listbox"
+        aria-expanded={isOpen}
+        aria-controls={menuId}
+        className={dropdownButtonClassName}
+      >
+        <span className={`truncate ${selected ? 'text-heading' : 'text-body'}`}>
+          {selected?.label ?? placeholder}
+        </span>
+        <svg
+          className="w-4 h-4 shrink-0 -me-0.5 text-body"
+          aria-hidden="true"
+          xmlns="http://www.w3.org/2000/svg"
+          width="24"
+          height="24"
+          fill="none"
+          viewBox="0 0 24 24"
+        >
+          <path stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="m19 9-7 7-7-7" />
+        </svg>
+      </button>
+      {isOpen && (
+        <div
+          id={menuId}
+          className="absolute start-0 top-full mt-1 z-20 w-full min-w-44 bg-neutral-primary-medium border border-default-medium rounded-base shadow-lg"
+        >
+          <ul role="listbox" aria-labelledby={id} className="max-h-60 overflow-y-auto p-2 text-sm text-body font-medium">
+            {options.map((option) => (
+              <li key={option.value} role="option" aria-selected={option.value === value}>
+                <button
+                  type="button"
+                  onClick={() => select(option.value)}
+                  className={`${dropdownItemClassName} ${option.value === value ? 'text-heading' : ''}`}
+                >
+                  {option.label}
+                </button>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+    </div>
+  )
+}
 
 interface FormState {
   name: string
@@ -362,23 +468,16 @@ export default function CreatePartModal({
                 <label htmlFor="part-category" className={labelClassName}>
                   Categoria
                 </label>
-                <select
+                <Dropdown
                   id="part-category"
-                  required={!isAddingCategory}
                   value={isAddingCategory ? NEW_CATEGORY_VALUE : form.category}
-                  onChange={(e) => handleCategoryChange(e.target.value)}
-                  className={inputClassName}
-                >
-                  <option value="" disabled>
-                    Selecione...
-                  </option>
-                  {categories.map((item) => (
-                    <option key={item} value={item}>
-                      {item}
-                    </option>
-                  ))}
-                  <option value={NEW_CATEGORY_VALUE}>+ Nova categoria</option>
-                </select>
+                  onChange={handleCategoryChange}
+                  placeholder="Selecione..."
+                  options={[
+                    ...categories.map((item) => ({ value: item, label: item })),
+                    { value: NEW_CATEGORY_VALUE, label: '+ Nova categoria' },
+                  ]}
+                />
                 {isAddingCategory && (
                   <div className="mt-2 flex gap-2">
                     <label htmlFor="part-new-category" className="sr-only">
@@ -493,19 +592,12 @@ export default function CreatePartModal({
                 <label htmlFor="part-body-type" className={labelClassName}>
                   Tipo de carroceria
                 </label>
-                <select
+                <Dropdown<BodyType | ''>
                   id="part-body-type"
                   value={form.bodyType}
-                  onChange={(e) => update('bodyType', e.target.value as BodyType | '')}
-                  className={inputClassName}
-                >
-                  <option value="">Não se aplica</option>
-                  {BODY_TYPES.map((item) => (
-                    <option key={item.value} value={item.value}>
-                      {item.label}
-                    </option>
-                  ))}
-                </select>
+                  onChange={(value) => update('bodyType', value)}
+                  options={[{ value: '', label: 'Não se aplica' }, ...BODY_TYPES]}
+                />
               </div>
 
               <fieldset>
@@ -554,19 +646,12 @@ export default function CreatePartModal({
                 <label htmlFor="part-condition" className={labelClassName}>
                   Condição
                 </label>
-                <select
+                <Dropdown
                   id="part-condition"
-                  required
                   value={form.condition}
-                  onChange={(e) => update('condition', e.target.value as PartCondition)}
-                  className={inputClassName}
-                >
-                  {CONDITIONS.map((item) => (
-                    <option key={item.value} value={item.value}>
-                      {item.label}
-                    </option>
-                  ))}
-                </select>
+                  onChange={(value) => update('condition', value)}
+                  options={CONDITIONS}
+                />
               </div>
               <div>
                 <label htmlFor="part-color" className={labelClassName}>
@@ -649,19 +734,12 @@ export default function CreatePartModal({
                 <label htmlFor="part-status" className={labelClassName}>
                   Status
                 </label>
-                <select
+                <Dropdown
                   id="part-status"
-                  required
                   value={form.status}
-                  onChange={(e) => update('status', e.target.value as PartStatus)}
-                  className={inputClassName}
-                >
-                  {STATUSES.map((item) => (
-                    <option key={item.value} value={item.value}>
-                      {item.label}
-                    </option>
-                  ))}
-                </select>
+                  onChange={(value) => update('status', value)}
+                  options={STATUSES}
+                />
               </div>
             </div>
           </fieldset>
