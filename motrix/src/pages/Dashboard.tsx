@@ -1,6 +1,11 @@
-import { useEffect, useRef, useState, type SubmitEvent } from 'react'
+import { useEffect, useMemo, useRef, useState, type SubmitEvent } from 'react'
+import CategoryCard, { type CategorySummary } from '../components/CategoryCard.tsx'
+import CategoryModal from '../components/CategoryModal.tsx'
 import CreatePartModal from '../components/CreatePartModal.tsx'
 import type { Part } from '../types/part.ts'
+
+// EXEMPLO - REMOVER: card fixo só para visualizar a grade sem dados (apague esta constante e o uso abaixo).
+const EXAMPLE_CATEGORY: CategorySummary = { name: 'Lataria', count: 3 }
 
 const ALL_CATEGORIES = 'Todas as categorias'
 const DEFAULT_CATEGORIES = [
@@ -21,7 +26,27 @@ export default function Dashboard() {
   const [category, setCategory] = useState(ALL_CATEGORIES)
   const [isDropdownOpen, setIsDropdownOpen] = useState(false)
   const [isCreateOpen, setIsCreateOpen] = useState(false)
+  const [parts, setParts] = useState<Part[]>([])
+  const [openCategory, setOpenCategory] = useState<CategorySummary | null>(null)
   const dropdownRef = useRef<HTMLDivElement>(null)
+
+  // Contagem real de peças por categoria; categorias sem peças não aparecem.
+  const categorySummaries = useMemo(() => {
+    const counts = new Map<string, number>()
+    for (const part of parts) counts.set(part.category, (counts.get(part.category) ?? 0) + 1)
+    const summaries = categories
+      .filter((name) => (counts.get(name) ?? 0) > 0)
+      .map((name) => ({ name, count: counts.get(name) ?? 0 }))
+
+    // EXEMPLO - REMOVER
+    if (!counts.has(EXAMPLE_CATEGORY.name)) summaries.push(EXAMPLE_CATEGORY)
+
+    return summaries
+  }, [parts, categories])
+
+  function openCategoryModal(category: CategorySummary) {
+    setOpenCategory(category)
+  }
 
   useEffect(() => {
     if (!isDropdownOpen) return
@@ -51,8 +76,8 @@ export default function Dashboard() {
   }
 
   function handleCreate(part: Part) {
-    // TODO: integrar com o cadastro de peças
-    console.log(part)
+    // TODO: integrar com o cadastro de peças (por enquanto as peças ficam só em memória)
+    setParts((current) => [...current, part])
   }
 
   return (
@@ -208,6 +233,25 @@ export default function Dashboard() {
         onClose={() => setIsCreateOpen(false)}
         onCreate={handleCreate}
       />
+
+      <div className="flex-1 mt-8 overflow-y-auto">
+        <h2>Catálogo de Peças</h2>
+
+        {categorySummaries.length > 0 && (
+          // p-2 dá folga para o scale do hover não ser cortado pelo overflow do contêiner.
+          <ul className="mt-4 grid grid-cols-2 gap-4 p-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6">
+            {categorySummaries.map((item) => (
+              <li key={item.name}>
+                <CategoryCard category={item} onOpen={openCategoryModal} />
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
+
+      <CategoryModal category={openCategory} onClose={() => setOpenCategory(null)} />
+
     </section>
+
   )
 }
