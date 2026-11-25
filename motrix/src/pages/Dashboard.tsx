@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type SubmitEvent } from 'react'
+import { useEffect, useMemo, useRef, useState, type SubmitEvent } from 'react'
 import { useNavigate } from 'react-router'
 import CreatePartModal from '../components/CreatePartModal.tsx'
 import PartCard from '../components/PartCard.tsx'
@@ -18,6 +18,11 @@ import type { Category, Part, PartStatus } from '../types/part.ts'
 
 const ALL_CATEGORIES = 'Todas as categorias'
 
+/** Minúsculas e sem acentos, para a busca ignorar caixa e acentuação. */
+function normalize(text: string) {
+  return text.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().trim()
+}
+
 const dropdownItemClassName =
   'block w-full p-2 text-start hover:bg-neutral-tertiary-medium hover:text-heading rounded-md cursor-pointer'
 
@@ -28,6 +33,7 @@ export default function Dashboard() {
   const [isDropdownOpen, setIsDropdownOpen] = useState(false)
   const [isCreateOpen, setIsCreateOpen] = useState(false)
   const [parts, setParts] = useState<Part[]>([])
+  const [query, setQuery] = useState('')
   const [loadError, setLoadError] = useState('')
   const [isLoading, setIsLoading] = useState(true)
   const [openPart, setOpenPart] = useState<Part | null>(null)
@@ -79,13 +85,21 @@ export default function Dashboard() {
     }
   }, [isDropdownOpen])
 
+  // Filtro local: o catálogo inteiro já está em memória. O texto casa com o nome da peça ou da categoria.
+  const filteredParts = useMemo(() => {
+    const term = normalize(query)
+    return parts.filter((part) => {
+      if (category !== ALL_CATEGORIES && part.category !== category) return false
+      if (!term) return true
+      return normalize(part.name).includes(term) || normalize(part.category).includes(term)
+    })
+  }, [parts, category, query])
+
+  const isFiltering = category !== ALL_CATEGORIES || normalize(query) !== ''
+
   function handleSearch(event: SubmitEvent<HTMLFormElement>) {
+    // A busca já filtra enquanto digita; o submit só evita recarregar a página.
     event.preventDefault()
-    const formData = new FormData(event.currentTarget)
-    const query = String(formData.get('search') ?? '').trim()
-    if (!query) return
-    // TODO: integrar com a busca de peças
-    console.log({ category, query })
   }
 
   async function handleCreate(part: Part) {
@@ -207,7 +221,8 @@ export default function Dashboard() {
                 type="search"
                 id="search-dropdown"
                 name="search"
-                required
+                value={query}
+                onChange={(event) => setQuery(event.target.value)}
                 className="min-w-0 px-3 py-2.5 bg-neutral-secondary-medium border border-default-strong text-heading text-sm focus:ring-brand focus:border-brand block w-full placeholder:text-body"
                 placeholder="Buscar peças..."
               />
@@ -290,11 +305,15 @@ export default function Dashboard() {
           <p className="mt-4 p-2 text-sm text-body">Nenhuma peça cadastrada ainda.</p>
         )}
 
-        {!isLoading && parts.length > 0 && (
+        {!isLoading && isFiltering && parts.length > 0 && filteredParts.length === 0 && (
+          <p className="mt-4 p-2 text-sm text-body">Nenhuma peça encontrada para esta busca.</p>
+        )}
+
+        {!isLoading && filteredParts.length > 0 && (
           // Ordem do backend (created_at desc); peças novas entram no topo via handleCreate.
           // p-2 dá folga para o efeito de hover não ser cortado pelo overflow do contêiner.
           <ul className="mt-4 flex flex-col gap-3 p-2">
-            {parts.map((part, index) => (
+            {filteredParts.map((part, index) => (
               <li key={part.id ?? index}>
                 <PartCard part={part} onOpen={setOpenPart} onStatusChange={handleStatusChange} />
               </li>
