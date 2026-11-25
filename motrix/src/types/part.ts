@@ -44,4 +44,6 @@ export interface Part {
   tags: string[]
   /** Fotos da peça; ao criar, vão para o Storage e para public.peca_fotos (na ordem do array = position). */
   photos?: File[]
+  /** URLs (assinadas) das fotos já salvas, em ordem de position. Só para exibição; não é coluna do banco. */
+  photoUrls?: string[]
 }

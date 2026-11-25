@@ -23,6 +23,7 @@ interface PartRow {
   status: Part['status']
   tags: string[]
   categorias: { name: string } | null
+  peca_fotos: { storage_path: string; position: number }[] | null
 }
 
 /** Bucket do Supabase Storage onde ficam os arquivos das fotos (as linhas vão em public.peca_fotos). */
@@ -43,7 +44,41 @@ export function isAllowedPhoto(file: File) {
 }
 
 const PART_COLUMNS =
-  'id, name, category_id, oem_number, brand, model, version, year_start, year_end, body_type, axle, side, condition, damage_description, color, cost, sale_price, status, tags, categorias(name)'
+  'id, name, category_id, oem_number, brand, model, version, year_start, year_end, body_type, axle, side, condition, damage_description, color, cost, sale_price, status, tags, categorias(name), peca_fotos(storage_path, position)'
+
+/** Validade das URLs assinadas das fotos (em segundos). */
+const PHOTO_URL_TTL_SECONDS = 60 * 60
+
+/** Caminhos das fotos de uma linha, na ordem de position. */
+function photoPaths(row: PartRow) {
+  return [...(row.peca_fotos ?? [])]
+    .sort((a, b) => a.position - b.position)
+    .map((photo) => photo.storage_path)
+}
+
+/**
+ * Gera URLs assinadas (funciona com bucket privado) para vários caminhos em uma única chamada.
+ * Falha ao assinar não derruba a listagem: a peça só fica sem preview.
+ */
+async function signPhotoUrls(paths: string[]) {
+  const urls = new Map<string, string>()
+  if (paths.length === 0) return urls
+  const { data, error } = await supabase.storage
+    .from(PHOTOS_BUCKET)
+    .createSignedUrls(paths, PHOTO_URL_TTL_SECONDS)
+  if (error) {
+    console.error('Falha ao gerar URLs das fotos:', error.message)
+    return urls
+  }
+  for (const item of data) {
+    if (item.path && item.signedUrl) urls.set(item.path, item.signedUrl)
+  }
+  return urls
+}
+
+function withPhotoUrls(part: Part, paths: string[], urls: Map<string, string>): Part {
+  return { ...part, photoUrls: paths.flatMap((path) => urls.get(path) ?? []) }
+}
 
 /** numeric(12,2) pode chegar como string; converte para number. */
 function toNumber(value: number | string | null) {
@@ -108,7 +143,10 @@ export async function fetchParts(): Promise<Part[]> {
     .order('created_at', { ascending: false })
     .returns<PartRow[]>()
   if (error) throw toFriendlyError(error)
-  return data.map(fromRow)
+
+  const pathsByRow = data.map(photoPaths)
+  const urls = await signPhotoUrls(pathsByRow.flat())
+  return data.map((row, index) => withPhotoUrls(fromRow(row), pathsByRow[index], urls))
 }
 
 /**
@@ -149,6 +187,7 @@ async function uploadPartPhotos(partId: string, photos: File[]) {
 
     const { error } = await supabase.from('peca_fotos').insert(rows)
     if (error) throw toFriendlyError(error)
+    return uploadedPaths
   } catch (err) {
     if (uploadedPaths.length > 0) await supabase.storage.from(PHOTOS_BUCKET).remove(uploadedPaths)
     throw err
@@ -187,9 +226,10 @@ export async function createPart(part: Part): Promise<Part> {
     .single<PartRow>()
   if (error) throw toFriendlyError(error)
 
+  let storagePaths: string[] = []
   if (part.photos && part.photos.length > 0) {
     try {
-      await uploadPartPhotos(data.id, part.photos)
+      storagePaths = await uploadPartPhotos(data.id, part.photos)
     } catch (err) {
       // ON DELETE CASCADE em peca_fotos limpa as linhas que tiverem sido gravadas.
       await supabase.from('pecas').delete().eq('id', data.id)
@@ -197,5 +237,6 @@ export async function createPart(part: Part): Promise<Part> {
     }
   }
 
-  return { ...fromRow(data), photos: part.photos }
+  const urls = await signPhotoUrls(storagePaths)
+  return withPhotoUrls({ ...fromRow(data), photos: part.photos }, storagePaths, urls)
 }

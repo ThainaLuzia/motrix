@@ -1,15 +1,69 @@
-import { useEffect, useRef } from 'react'
-import type { CategorySummary } from './CategoryCard.tsx'
+import { useEffect, useRef, type MouseEvent, type ReactNode } from 'react'
+import { AXLE_LABELS, formatPrice, SIDE_LABELS } from '../lib/partLabels.ts'
+import type { Part } from '../types/part.ts'
+import { StatusBadge } from './PartCard.tsx'
 
-interface CategoryModalProps {
-  /** Categoria aberta; null mantém o modal fechado. */
-  category: CategorySummary | null
+interface PartModalProps {
+  /** Peça aberta; null mantém o modal fechado. */
+  part: Part | null
   onClose: () => void
 }
 
-export default function CategoryModal({ category, onClose }: CategoryModalProps) {
+/** Bloco com título; cada seção do modal é um destes, então dá para acrescentar outras facilmente. */
+function Section({ title, children }: { title: string; children: ReactNode }) {
+  return (
+    <section className="flex flex-col gap-3">
+      <h3 className="m-0 text-sm font-semibold uppercase tracking-wide text-body">{title}</h3>
+      {children}
+    </section>
+  )
+}
+
+function PartPhotos({ part }: { part: Part }) {
+  const urls = part.photoUrls ?? []
+  if (urls.length === 0) return <p className="m-0 text-sm text-body">Nenhuma foto cadastrada.</p>
+  return (
+    <ul className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+      {urls.map((url, index) => (
+        <li key={url} className="aspect-[4/3] overflow-hidden rounded-base">
+          <img
+            src={url}
+            alt={`${part.name} — foto ${index + 1}`}
+            className="h-full w-full object-cover"
+          />
+        </li>
+      ))}
+    </ul>
+  )
+}
+
+function PartDetails({ part }: { part: Part }) {
+  const { brand, model, axle, side } = part.compatibility
+  const rows: [string, ReactNode][] = [
+    ['Categoria', part.category || '—'],
+    ['Marca', brand],
+    ['Modelo', model],
+    ['Cor', part.color ?? '—'],
+    ['Eixo', axle ? AXLE_LABELS[axle] : '—'],
+    ['Lado', side ? SIDE_LABELS[side] : '—'],
+    ['Preço de venda', formatPrice(part.salePrice)],
+    ['Status', <StatusBadge key="status" status={part.status} />],
+  ]
+  return (
+    <dl className="grid grid-cols-1 gap-x-6 gap-y-3 sm:grid-cols-2">
+      {rows.map(([label, value]) => (
+        <div key={label} className="flex flex-col gap-0.5">
+          <dt className="text-xs text-body">{label}</dt>
+          <dd className="m-0 text-sm font-medium text-heading">{value}</dd>
+        </div>
+      ))}
+    </dl>
+  )
+}
+
+export default function PartModal({ part, onClose }: PartModalProps) {
   const dialogRef = useRef<HTMLDialogElement>(null)
-  const open = category !== null
+  const open = part !== null
 
   useEffect(() => {
     const dialog = dialogRef.current
@@ -35,16 +89,23 @@ export default function CategoryModal({ category, onClose }: CategoryModalProps)
     }
   }, [open])
 
+  // O conteúdo preenche o <dialog>, então um clique cujo alvo é o próprio dialog veio do backdrop.
+  function handleBackdropClick(event: MouseEvent<HTMLDialogElement>) {
+    if (event.target === event.currentTarget) onClose()
+  }
+
   return (
+    // ESC dispara o evento close nativo do <dialog>, que chama onClose.
     <dialog
       ref={dialogRef}
       onClose={onClose}
-      aria-labelledby="category-modal-title"
+      onClick={handleBackdropClick}
+      aria-labelledby="part-modal-title"
       className="m-auto w-[calc(100%-2rem)] max-w-3xl max-h-[90svh] overflow-hidden open:flex open:flex-col p-0 text-start bg-neutral-primary-medium border border-default-strong rounded-base shadow-lg backdrop:bg-black/60"
     >
       <div className="flex shrink-0 items-center justify-between gap-4 border-b border-default-strong px-4 py-4 sm:px-6">
-        <h2 id="category-modal-title" className="m-0 min-w-0 truncate text-xl font-semibold text-heading">
-          {category?.name}
+        <h2 id="part-modal-title" className="m-0 min-w-0 truncate text-xl font-semibold text-heading">
+          {part?.name}
         </h2>
         <button
           type="button"
@@ -70,8 +131,19 @@ export default function CategoryModal({ category, onClose }: CategoryModalProps)
         </button>
       </div>
 
-      {/* TODO: conteúdo da categoria será estruturado depois. */}
-      <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-4 py-6 sm:px-6" />
+      {/* TODO: conteúdo detalhado da peça será definido depois — basta acrescentar novas <Section>. */}
+      <div className="flex min-h-0 flex-1 flex-col gap-6 overflow-y-auto overscroll-contain px-4 py-6 sm:px-6">
+        {part && (
+          <>
+            <Section title="Fotos">
+              <PartPhotos part={part} />
+            </Section>
+            <Section title="Informações">
+              <PartDetails part={part} />
+            </Section>
+          </>
+        )}
+      </div>
     </dialog>
   )
 }

@@ -1,8 +1,8 @@
-import { useEffect, useMemo, useRef, useState, type SubmitEvent } from 'react'
+import { useEffect, useRef, useState, type SubmitEvent } from 'react'
 import { useNavigate } from 'react-router'
-import CategoryCard, { type CategorySummary } from '../components/CategoryCard.tsx'
-import CategoryModal from '../components/CategoryModal.tsx'
 import CreatePartModal from '../components/CreatePartModal.tsx'
+import PartCard from '../components/PartCard.tsx'
+import PartModal from '../components/PartModal.tsx'
 import Skeleton from '../components/Skeleton.tsx'
 import { supabase } from '../lib/supabase.ts'
 import { createCategory, createPart, fetchCategories, fetchParts } from '../services/parts.ts'
@@ -22,7 +22,7 @@ export default function Dashboard() {
   const [parts, setParts] = useState<Part[]>([])
   const [loadError, setLoadError] = useState('')
   const [isLoading, setIsLoading] = useState(true)
-  const [openCategory, setOpenCategory] = useState<CategorySummary | null>(null)
+  const [openPart, setOpenPart] = useState<Part | null>(null)
   const dropdownRef = useRef<HTMLDivElement>(null)
 
   // Sem sessão o RLS bloqueia tudo (e pecas.user_id = auth.uid()), então volta para o login.
@@ -52,19 +52,6 @@ export default function Dashboard() {
       cancelled = true
     }
   }, [navigate])
-
-  // Contagem real de peças por categoria; categorias sem peças não aparecem.
-  const categorySummaries = useMemo(() => {
-    const counts = new Map<string, number>()
-    for (const part of parts) counts.set(part.categoryId, (counts.get(part.categoryId) ?? 0) + 1)
-    return categories
-      .filter((item) => (counts.get(item.id) ?? 0) > 0)
-      .map((item) => ({ name: item.name, count: counts.get(item.id) ?? 0 }))
-  }, [parts, categories])
-
-  function openCategoryModal(category: CategorySummary) {
-    setOpenCategory(category)
-  }
 
   useEffect(() => {
     if (!isDropdownOpen) return
@@ -276,19 +263,24 @@ export default function Dashboard() {
           </div>
         )}
 
-        {!isLoading && categorySummaries.length > 0 && (
-          // p-2 dá folga para o scale do hover não ser cortado pelo overflow do contêiner.
-          <ul className="mt-4 grid grid-cols-2 gap-4 p-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6">
-            {categorySummaries.map((item) => (
-              <li key={item.name}>
-                <CategoryCard category={item} onOpen={openCategoryModal} />
+        {!isLoading && !loadError && parts.length === 0 && (
+          <p className="mt-4 p-2 text-sm text-body">Nenhuma peça cadastrada ainda.</p>
+        )}
+
+        {!isLoading && parts.length > 0 && (
+          // Ordem do backend (created_at desc); peças novas entram no topo via handleCreate.
+          // p-2 dá folga para o efeito de hover não ser cortado pelo overflow do contêiner.
+          <ul className="mt-4 flex flex-col gap-3 p-2">
+            {parts.map((part, index) => (
+              <li key={part.id ?? index}>
+                <PartCard part={part} onOpen={setOpenPart} />
               </li>
             ))}
           </ul>
         )}
       </div>
 
-      <CategoryModal category={openCategory} onClose={() => setOpenCategory(null)} />
+      <PartModal part={openPart} onClose={() => setOpenPart(null)} />
 
     </section>
 
