@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router'
 import CategoryCard, { type CategorySummary } from '../components/CategoryCard.tsx'
 import CategoryModal from '../components/CategoryModal.tsx'
 import CreatePartModal from '../components/CreatePartModal.tsx'
+import Skeleton from '../components/Skeleton.tsx'
 import { supabase } from '../lib/supabase.ts'
 import { createCategory, createPart, fetchCategories, fetchParts } from '../services/parts.ts'
 import type { Category, Part } from '../types/part.ts'
@@ -20,6 +21,7 @@ export default function Dashboard() {
   const [isCreateOpen, setIsCreateOpen] = useState(false)
   const [parts, setParts] = useState<Part[]>([])
   const [loadError, setLoadError] = useState('')
+  const [isLoading, setIsLoading] = useState(true)
   const [openCategory, setOpenCategory] = useState<CategorySummary | null>(null)
   const dropdownRef = useRef<HTMLDivElement>(null)
 
@@ -40,6 +42,8 @@ export default function Dashboard() {
         setParts(loadedParts)
       } catch (err) {
         if (!cancelled) setLoadError(`Não foi possível carregar o catálogo: ${(err as Error).message}`)
+      } finally {
+        if (!cancelled) setIsLoading(false)
       }
     }
 
@@ -266,7 +270,13 @@ export default function Dashboard() {
           </p>
         )}
 
-        {categorySummaries.length > 0 && (
+        {isLoading && (
+          <div className="mt-4 p-2">
+            <Skeleton label="Carregando catálogo..." />
+          </div>
+        )}
+
+        {!isLoading && categorySummaries.length > 0 && (
           // p-2 dá folga para o scale do hover não ser cortado pelo overflow do contêiner.
           <ul className="mt-4 grid grid-cols-2 gap-4 p-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6">
             {categorySummaries.map((item) => (
