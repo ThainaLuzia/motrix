@@ -46,4 +46,7 @@ export interface Part {
   photos?: File[]
   /** URLs (assinadas) das fotos já salvas, em ordem de position. Só para exibição; não é coluna do banco. */
   photoUrls?: string[]
+  /** Preenchidos pelo banco (ISO 8601); só para exibição. */
+  createdAt?: string
+  updatedAt?: string
 }

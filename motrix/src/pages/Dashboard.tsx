@@ -5,7 +5,14 @@ import PartCard from '../components/PartCard.tsx'
 import PartModal from '../components/PartModal.tsx'
 import Skeleton from '../components/Skeleton.tsx'
 import { supabase } from '../lib/supabase.ts'
-import { createCategory, createPart, fetchCategories, fetchParts } from '../services/parts.ts'
+import {
+  createCategory,
+  createPart,
+  deletePart,
+  fetchCategories,
+  fetchParts,
+  updatePart,
+} from '../services/parts.ts'
 import type { Category, Part } from '../types/part.ts'
 
 const ALL_CATEGORIES = 'Todas as categorias'
@@ -84,6 +91,16 @@ export default function Dashboard() {
     // createPart também envia part.photos para o Storage e grava em peca_fotos.
     const saved = await createPart(part)
     setParts((current) => [saved, ...current])
+  }
+
+  async function handleSave(id: string, part: Part) {
+    const saved = await updatePart(id, part)
+    setParts((current) => current.map((item) => (item.id === id ? saved : item)))
+  }
+
+  async function handleDelete(id: string) {
+    await deletePart(id)
+    setParts((current) => current.filter((item) => item.id !== id))
   }
 
   async function handleAddCategory(name: string) {
@@ -280,9 +297,14 @@ export default function Dashboard() {
         )}
       </div>
 
-      <PartModal part={openPart} onClose={() => setOpenPart(null)} />
-
+      <PartModal
+        part={openPart}
+        categories={categories}
+        onAddCategory={handleAddCategory}
+        onClose={() => setOpenPart(null)}
+        onSave={handleSave}
+        onDelete={handleDelete}
+      />
     </section>
-
   )
 }

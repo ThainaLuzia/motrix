@@ -22,6 +22,8 @@ interface PartRow {
   sale_price: number | string | null
   status: Part['status']
   tags: string[]
+  created_at: string
+  updated_at: string
   categorias: { name: string } | null
   peca_fotos: { storage_path: string; position: number }[] | null
 }
@@ -44,7 +46,7 @@ export function isAllowedPhoto(file: File) {
 }
 
 const PART_COLUMNS =
-  'id, name, category_id, oem_number, brand, model, version, year_start, year_end, body_type, axle, side, condition, damage_description, color, cost, sale_price, status, tags, categorias(name), peca_fotos(storage_path, position)'
+  'id, name, category_id, oem_number, brand, model, version, year_start, year_end, body_type, axle, side, condition, damage_description, color, cost, sale_price, status, tags, created_at, updated_at, categorias(name), peca_fotos(storage_path, position)'
 
 /** Validade das URLs assinadas das fotos (em segundos). */
 const PHOTO_URL_TTL_SECONDS = 60 * 60
@@ -109,6 +111,8 @@ function fromRow(row: PartRow): Part {
     salePrice: toNumber(row.sale_price),
     status: row.status,
     tags: row.tags,
+    createdAt: row.created_at,
+    updatedAt: row.updated_at,
   }
 }
 
@@ -117,6 +121,8 @@ function toFriendlyError(error: { code?: string; message: string }) {
   if (error.code === '23505') return new Error('Já existe um registro com esse nome.')
   if (error.code === '23514') return new Error(`Dados inválidos: ${error.message}`)
   if (error.code === '42501') return new Error('Sem permissão. Faça login novamente.')
+  // .single() sem linha: com RLS, update em linha de outro usuário (ou já apagada) não dá erro, só 0 linhas.
+  if (error.code === 'PGRST116') return new Error('Peça não encontrada ou sem permissão para alterá-la.')
   return new Error(error.message)
 }
 
@@ -194,34 +200,39 @@ async function uploadPartPhotos(partId: string, photos: File[]) {
   }
 }
 
+/** Colunas editáveis de public.pecas; user_id, id, created_at e updated_at ficam com o banco. */
+function toRowValues(part: Part) {
+  const { compatibility: c } = part
+  return {
+    name: part.name,
+    category_id: part.categoryId,
+    oem_number: part.oemNumber ?? null,
+    brand: c.brand,
+    model: c.model,
+    version: c.version ?? null,
+    year_start: c.yearStart ?? null,
+    year_end: c.yearEnd ?? null,
+    body_type: c.bodyType ?? null,
+    axle: c.axle ?? null,
+    side: c.side ?? null,
+    condition: part.condition,
+    damage_description: part.damageDescription ?? null,
+    color: part.color ?? null,
+    cost: part.cost ?? null,
+    sale_price: part.salePrice ?? null,
+    status: part.status,
+    tags: part.tags,
+  }
+}
+
 /**
  * Insere a peça e, se houver, suas fotos; user_id, id, created_at e updated_at são preenchidos pelo banco.
  * Se as fotos falharem, a peça é apagada para não ficar um cadastro pela metade.
  */
 export async function createPart(part: Part): Promise<Part> {
-  const { compatibility: c } = part
   const { data, error } = await supabase
     .from('pecas')
-    .insert({
-      name: part.name,
-      category_id: part.categoryId,
-      oem_number: part.oemNumber ?? null,
-      brand: c.brand,
-      model: c.model,
-      version: c.version ?? null,
-      year_start: c.yearStart ?? null,
-      year_end: c.yearEnd ?? null,
-      body_type: c.bodyType ?? null,
-      axle: c.axle ?? null,
-      side: c.side ?? null,
-      condition: part.condition,
-      damage_description: part.damageDescription ?? null,
-      color: part.color ?? null,
-      cost: part.cost ?? null,
-      sale_price: part.salePrice ?? null,
-      status: part.status,
-      tags: part.tags,
-    })
+    .insert(toRowValues(part))
     .select(PART_COLUMNS)
     .single<PartRow>()
   if (error) throw toFriendlyError(error)
@@ -239,4 +250,41 @@ export async function createPart(part: Part): Promise<Part> {
 
   const urls = await signPhotoUrls(storagePaths)
   return withPhotoUrls({ ...fromRow(data), photos: part.photos }, storagePaths, urls)
+}
+
+/** Atualiza os dados da peça (as fotos não mudam) e devolve a linha salva, com updated_at novo. */
+export async function updatePart(id: string, part: Part): Promise<Part> {
+  const { data, error } = await supabase
+    .from('pecas')
+    .update(toRowValues(part))
+    .eq('id', id)
+    .select(PART_COLUMNS)
+    .single<PartRow>()
+  if (error) throw toFriendlyError(error)
+
+  const paths = photoPaths(data)
+  const urls = await signPhotoUrls(paths)
+  return withPhotoUrls(fromRow(data), paths, urls)
+}
+
+/**
+ * Apaga a peça. As linhas de peca_fotos saem pelo ON DELETE CASCADE; os arquivos do
+ * Storage são removidos depois (se isso falhar, a peça já foi apagada e só sobra o arquivo órfão).
+ */
+export async function deletePart(id: string): Promise<void> {
+  const { data: photos, error: photosError } = await supabase
+    .from('peca_fotos')
+    .select('storage_path')
+    .eq('peca_id', id)
+  if (photosError) throw toFriendlyError(photosError)
+
+  // Com RLS, apagar linha de outro usuário não dá erro: só volta vazio.
+  const { data, error } = await supabase.from('pecas').delete().eq('id', id).select('id')
+  if (error) throw toFriendlyError(error)
+  if (data.length === 0) throw new Error('Peça não encontrada ou sem permissão para excluí-la.')
+
+  const paths = photos.map((photo) => photo.storage_path)
+  if (paths.length === 0) return
+  const { error: storageError } = await supabase.storage.from(PHOTOS_BUCKET).remove(paths)
+  if (storageError) console.error('Falha ao remover fotos do Storage:', storageError.message)
 }
