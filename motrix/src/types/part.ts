@@ -42,6 +42,6 @@ export interface Part {
   status: PartStatus
   /** Tags no formato tipo:valor (ex.: categoria:lataria, posicao:lado-esquerdo). */
   tags: string[]
-  /** Fotos da peça. Ainda não são enviadas ao Supabase (não há tabela/bucket para elas). */
+  /** Fotos da peça; ao criar, vão para o Storage e para public.peca_fotos (na ordem do array = position). */
   photos?: File[]
 }

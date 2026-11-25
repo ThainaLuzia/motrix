@@ -90,7 +90,7 @@ export default function Dashboard() {
   }
 
   async function handleCreate(part: Part) {
-    // TODO: enviar part.photos quando existir bucket/tabela de fotos no Supabase.
+    // createPart também envia part.photos para o Storage e grava em peca_fotos.
     const saved = await createPart(part)
     setParts((current) => [saved, ...current])
   }

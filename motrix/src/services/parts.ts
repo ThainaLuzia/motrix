@@ -25,6 +25,23 @@ interface PartRow {
   categorias: { name: string } | null
 }
 
+/** Bucket do Supabase Storage onde ficam os arquivos das fotos (as linhas vão em public.peca_fotos). */
+export const PHOTOS_BUCKET = 'pecas-fotos'
+
+/** Limites espelhados das constraints peca_fotos_mime_valid e peca_fotos_size_valid. */
+export const PHOTO_MIME_TYPES = ['image/png', 'image/jpeg', 'image/webp'] as const
+export const MAX_PHOTO_BYTES = 5 * 1024 * 1024
+
+const PHOTO_EXTENSIONS: Record<(typeof PHOTO_MIME_TYPES)[number], string> = {
+  'image/png': 'png',
+  'image/jpeg': 'jpg',
+  'image/webp': 'webp',
+}
+
+export function isAllowedPhoto(file: File) {
+  return (PHOTO_MIME_TYPES as readonly string[]).includes(file.type) && file.size <= MAX_PHOTO_BYTES
+}
+
 const PART_COLUMNS =
   'id, name, category_id, oem_number, brand, model, version, year_start, year_end, body_type, axle, side, condition, damage_description, color, cost, sale_price, status, tags, categorias(name)'
 
@@ -94,7 +111,54 @@ export async function fetchParts(): Promise<Part[]> {
   return data.map(fromRow)
 }
 
-/** Insere a peça; user_id, id, created_at e updated_at são preenchidos pelo banco. */
+/**
+ * Envia as fotos para o Storage e registra cada uma em peca_fotos.
+ * Caminho: <user_id>/<peca_id>/<uuid>.<ext> (validado pelo trigger validar_propriedade_e_caminho_foto).
+ * Se algo falhar, remove os arquivos já enviados e relança o erro.
+ */
+async function uploadPartPhotos(partId: string, photos: File[]) {
+  const { data: sessionData } = await supabase.auth.getSession()
+  const userId = sessionData.session?.user.id
+  if (!userId) throw new Error('Sessão expirada. Faça login novamente.')
+
+  const uploadedPaths: string[] = []
+  try {
+    const rows = []
+    for (const [position, file] of photos.entries()) {
+      if (!isAllowedPhoto(file)) {
+        throw new Error(`A foto "${file.name}" precisa ser PNG, JPG ou WEBP de até 5 MB.`)
+      }
+      const extension = PHOTO_EXTENSIONS[file.type as keyof typeof PHOTO_EXTENSIONS]
+      const storagePath = `${userId}/${partId}/${crypto.randomUUID()}.${extension}`
+
+      const { error: uploadError } = await supabase.storage
+        .from(PHOTOS_BUCKET)
+        .upload(storagePath, file, { contentType: file.type, upsert: false })
+      if (uploadError) throw new Error(`Falha ao enviar "${file.name}": ${uploadError.message}`)
+      uploadedPaths.push(storagePath)
+
+      rows.push({
+        peca_id: partId,
+        storage_path: storagePath,
+        file_name: file.name,
+        mime_type: file.type,
+        size_bytes: file.size,
+        position,
+      })
+    }
+
+    const { error } = await supabase.from('peca_fotos').insert(rows)
+    if (error) throw toFriendlyError(error)
+  } catch (err) {
+    if (uploadedPaths.length > 0) await supabase.storage.from(PHOTOS_BUCKET).remove(uploadedPaths)
+    throw err
+  }
+}
+
+/**
+ * Insere a peça e, se houver, suas fotos; user_id, id, created_at e updated_at são preenchidos pelo banco.
+ * Se as fotos falharem, a peça é apagada para não ficar um cadastro pela metade.
+ */
 export async function createPart(part: Part): Promise<Part> {
   const { compatibility: c } = part
   const { data, error } = await supabase
@@ -122,5 +186,16 @@ export async function createPart(part: Part): Promise<Part> {
     .select(PART_COLUMNS)
     .single<PartRow>()
   if (error) throw toFriendlyError(error)
-  return fromRow(data)
+
+  if (part.photos && part.photos.length > 0) {
+    try {
+      await uploadPartPhotos(data.id, part.photos)
+    } catch (err) {
+      // ON DELETE CASCADE em peca_fotos limpa as linhas que tiverem sido gravadas.
+      await supabase.from('pecas').delete().eq('id', data.id)
+      throw err
+    }
+  }
+
+  return { ...fromRow(data), photos: part.photos }
 }

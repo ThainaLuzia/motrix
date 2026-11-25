@@ -16,6 +16,7 @@ import type {
   PartStatus,
   Side,
 } from '../types/part.ts'
+import { isAllowedPhoto, PHOTO_MIME_TYPES } from '../services/parts.ts'
 
 const NEW_CATEGORY_VALUE = '__nova__'
 const MIN_YEAR = 1950
@@ -307,6 +308,7 @@ export default function CreatePartModal({
   const [isSavingCategory, setIsSavingCategory] = useState(false)
   const [photos, setPhotos] = useState<PhotoItem[]>([])
   const [isDraggingPhotos, setIsDraggingPhotos] = useState(false)
+  const [photoError, setPhotoError] = useState('')
   const photosRef = useRef<PhotoItem[]>([])
 
   useEffect(() => {
@@ -395,7 +397,14 @@ export default function CreatePartModal({
 
   function addPhotos(files: FileList | null) {
     if (!files) return
-    const images = Array.from(files).filter((file) => file.type.startsWith('image/'))
+    const selected = Array.from(files)
+    const images = selected.filter(isAllowedPhoto)
+    const rejected = selected.length - images.length
+    setPhotoError(
+      rejected > 0
+        ? `${rejected} ${rejected === 1 ? 'arquivo ignorado' : 'arquivos ignorados'}: use PNG, JPG ou WEBP de até 5 MB.`
+        : '',
+    )
     if (images.length === 0) return
     setPhotos((current) => [
       ...current,
@@ -443,6 +452,7 @@ export default function CreatePartModal({
     photos.forEach((photo) => URL.revokeObjectURL(photo.url))
     setPhotos([])
     setIsDraggingPhotos(false)
+    setPhotoError('')
   }
 
   async function handleSubmit(event: SubmitEvent<HTMLFormElement>) {
@@ -555,14 +565,14 @@ export default function CreatePartModal({
               <p className="mb-2 text-sm">
                 <span className="font-semibold">Clique para enviar</span> ou arraste e solte
               </p>
-              <p className="text-xs">PNG, JPG, WEBP ou GIF — pode selecionar várias fotos</p>
+              <p className="text-xs">PNG, JPG ou WEBP de até 5 MB — pode selecionar várias fotos</p>
             </>
           )}
         </div>
         <input
           id="part-photos"
           type="file"
-          accept="image/*"
+          accept={PHOTO_MIME_TYPES.join(',')}
           multiple
           onChange={handlePhotoInput}
           className="hidden"
@@ -1048,6 +1058,11 @@ export default function CreatePartModal({
                 ))}
                 <li className="flex">{renderPhotoDropzone(true)}</li>
               </ul>
+            )}
+            {photoError && (
+              <p role="alert" className="mt-2 text-sm font-medium text-red-400">
+                {photoError}
+              </p>
             )}
           </fieldset>
         </div>
