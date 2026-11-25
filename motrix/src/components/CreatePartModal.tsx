@@ -10,6 +10,7 @@ import {
 import type {
   Axle,
   BodyType,
+  Category,
   Part,
   PartCondition,
   PartStatus,
@@ -188,7 +189,7 @@ function Dropdown<T extends string>({ id, value, options, onChange, placeholder 
 
 interface FormState {
   name: string
-  category: string
+  categoryId: string
   oemNumber: string
   brand: string
   model: string
@@ -208,7 +209,7 @@ interface FormState {
 
 const INITIAL_FORM: FormState = {
   name: '',
-  category: '',
+  categoryId: '',
   oemNumber: '',
   brand: '',
   model: '',
@@ -246,14 +247,14 @@ function toOptionalText(value: string) {
   return trimmed === '' ? undefined : trimmed
 }
 
-function buildAutoTags(form: FormState) {
+function buildAutoTags(form: FormState, categoryName: string) {
   const tags: string[] = []
   const push = (type: string, value: string) => {
     const slug = slugify(value)
     if (slug) tags.push(`${type}:${slug}`)
   }
 
-  push('categoria', form.category)
+  push('categoria', categoryName)
   if (form.axle) push('posicao', form.axle === 'dianteira' ? 'dianteiro' : 'traseiro')
   if (form.side) push('posicao', form.side === 'esquerdo' ? 'lado-esquerdo' : 'lado-direito')
   push('marca', form.brand)
@@ -278,10 +279,12 @@ function formatFileSize(bytes: number) {
 
 interface CreatePartModalProps {
   open: boolean
-  categories: string[]
-  onAddCategory: (category: string) => void
+  categories: Category[]
+  /** Cria a categoria no banco e devolve a linha criada. */
+  onAddCategory: (name: string) => Promise<Category>
   onClose: () => void
-  onCreate: (part: Part) => void
+  /** Salva a peça no banco; deve lançar erro se falhar. */
+  onCreate: (part: Part) => Promise<void>
 }
 
 export default function CreatePartModal({
@@ -300,6 +303,8 @@ export default function CreatePartModal({
   const [tagInput, setTagInput] = useState('')
   const [tagError, setTagError] = useState('')
   const [error, setError] = useState('')
+  const [isSubmitting, setIsSubmitting] = useState(false)
+  const [isSavingCategory, setIsSavingCategory] = useState(false)
   const [photos, setPhotos] = useState<PhotoItem[]>([])
   const [isDraggingPhotos, setIsDraggingPhotos] = useState(false)
   const photosRef = useRef<PhotoItem[]>([])
@@ -347,19 +352,31 @@ export default function CreatePartModal({
   function handleCategoryChange(value: string) {
     if (value === NEW_CATEGORY_VALUE) {
       setIsAddingCategory(true)
-      update('category', '')
+      update('categoryId', '')
       return
     }
     setIsAddingCategory(false)
-    update('category', value)
+    update('categoryId', value)
   }
 
-  function addCategory() {
+  async function addCategory() {
     const name = newCategory.trim()
-    if (!name) return
-    const existing = categories.find((c) => c.toLowerCase() === name.toLowerCase())
-    if (!existing) onAddCategory(name)
-    update('category', existing ?? name)
+    if (!name || isSavingCategory) return
+    const existing = categories.find((c) => c.name.toLowerCase() === name.toLowerCase())
+    if (existing) {
+      update('categoryId', existing.id)
+    } else {
+      setIsSavingCategory(true)
+      try {
+        const created = await onAddCategory(name)
+        update('categoryId', created.id)
+      } catch (err) {
+        setError(`Não foi possível criar a categoria: ${(err as Error).message}`)
+        return
+      } finally {
+        setIsSavingCategory(false)
+      }
+    }
     setNewCategory('')
     setIsAddingCategory(false)
   }
@@ -428,10 +445,11 @@ export default function CreatePartModal({
     setIsDraggingPhotos(false)
   }
 
-  function handleSubmit(event: SubmitEvent<HTMLFormElement>) {
+  async function handleSubmit(event: SubmitEvent<HTMLFormElement>) {
     event.preventDefault()
+    if (isSubmitting) return
 
-    if (!form.category) {
+    if (!form.categoryId) {
       setError('Selecione ou adicione uma categoria.')
       return
     }
@@ -443,10 +461,11 @@ export default function CreatePartModal({
       return
     }
 
-    const autoTags = buildAutoTags(form)
-    onCreate({
+    const autoTags = buildAutoTags(form, categoryName)
+    const part: Part = {
       name: form.name.trim(),
-      category: form.category,
+      categoryId: form.categoryId,
+      category: categoryName,
       oemNumber: toOptionalText(form.oemNumber),
       compatibility: {
         brand: form.brand.trim(),
@@ -466,12 +485,23 @@ export default function CreatePartModal({
       status: form.status,
       tags: [...new Set([...autoTags, ...manualTags])],
       photos: photos.length > 0 ? photos.map((photo) => photo.file) : undefined,
-    })
+    }
+
+    setIsSubmitting(true)
+    try {
+      await onCreate(part)
+    } catch (err) {
+      setError(`Não foi possível salvar a peça: ${(err as Error).message}`)
+      return
+    } finally {
+      setIsSubmitting(false)
+    }
     resetForm()
     onClose()
   }
 
-  const autoTags = buildAutoTags(form)
+  const categoryName = categories.find((c) => c.id === form.categoryId)?.name ?? ''
+  const autoTags = buildAutoTags(form, categoryName)
   const requiresDamageDescription =
     form.condition === 'usada-com-avaria' || form.condition === 'para-recuperar'
 
@@ -602,11 +632,11 @@ export default function CreatePartModal({
                 </label>
                 <Dropdown
                   id="part-category"
-                  value={isAddingCategory ? NEW_CATEGORY_VALUE : form.category}
+                  value={isAddingCategory ? NEW_CATEGORY_VALUE : form.categoryId}
                   onChange={handleCategoryChange}
                   placeholder="Selecione..."
                   options={[
-                    ...categories.map((item) => ({ value: item, label: item })),
+                    ...categories.map((item) => ({ value: item.id, label: item.name })),
                     { value: NEW_CATEGORY_VALUE, label: '+ Nova categoria' },
                   ]}
                 />
@@ -623,8 +653,14 @@ export default function CreatePartModal({
                       className={`${inputClassName} min-w-0`}
                       placeholder="Ex.: Vidros"
                     />
-                    <button type="button" onClick={addCategory} className={`${secondaryButtonClassName} shrink-0`}>
-                      Adicionar
+                    <button
+                      type="button"
+                      onClick={addCategory}
+                      disabled={isSavingCategory}
+                      aria-busy={isSavingCategory}
+                      className={`${secondaryButtonClassName} shrink-0 disabled:cursor-wait disabled:opacity-80`}
+                    >
+                      {isSavingCategory ? 'Salvando...' : 'Adicionar'}
                     </button>
                   </div>
                 )}
@@ -1025,8 +1061,13 @@ export default function CreatePartModal({
           <button type="button" onClick={onClose} className={secondaryButtonClassName}>
             Cancelar
           </button>
-          <button type="submit" className={primaryButtonClassName}>
-            Criar peça
+          <button
+            type="submit"
+            disabled={isSubmitting}
+            aria-busy={isSubmitting}
+            className={`${primaryButtonClassName} disabled:cursor-wait disabled:opacity-80`}
+          >
+            {isSubmitting ? 'Salvando...' : 'Criar peça'}
           </button>
         </div>
       </form>

@@ -1,14 +1,12 @@
 import { useEffect, useState, type SubmitEvent } from 'react'
 import { useNavigate } from 'react-router'
+import { supabase } from '../lib/supabase.ts'
 
 const TITLE = 'Faça seu Login'
 const TYPE_SPEED_MS = 80
 const DELETE_SPEED_MS = 40
 const PAUSE_AFTER_TYPE_MS = 2000
 const PAUSE_AFTER_DELETE_MS = 500
-
-const VALID_EMAIL = 'admin'
-const VALID_PASSWORD = 'admin'
 
 const inputClassName =
   'block w-full ps-9 py-2.5 bg-neutral-secondary-medium border border-default-strong text-heading text-sm rounded-base focus:ring-brand focus:border-brand shadow-xs placeholder:text-body'
@@ -27,13 +25,17 @@ export default function Login() {
     const email = String(formData.get('email') ?? '').trim()
     const password = String(formData.get('password') ?? '')
 
-    if (email !== VALID_EMAIL || password !== VALID_PASSWORD) {
+    setError('')
+    setIsLoading(true)
+
+    // A sessão do Supabase Auth é o que preenche pecas.user_id (auth.uid()) e libera o RLS.
+    const { error: authError } = await supabase.auth.signInWithPassword({ email, password })
+    if (authError) {
       setError('Email ou senha inválidos.')
+      setIsLoading(false)
       return
     }
 
-    setError('')
-    setIsLoading(true)
     try {
       await import('./Dashboard.tsx')
       navigate('/dashboard')

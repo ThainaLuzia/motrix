@@ -1,47 +1,61 @@
 import { useEffect, useMemo, useRef, useState, type SubmitEvent } from 'react'
+import { useNavigate } from 'react-router'
 import CategoryCard, { type CategorySummary } from '../components/CategoryCard.tsx'
 import CategoryModal from '../components/CategoryModal.tsx'
 import CreatePartModal from '../components/CreatePartModal.tsx'
-import type { Part } from '../types/part.ts'
-
-// EXEMPLO - REMOVER: card fixo só para visualizar a grade sem dados (apague esta constante e o uso abaixo).
-const EXAMPLE_CATEGORY: CategorySummary = { name: 'Lataria', count: 3 }
+import { supabase } from '../lib/supabase.ts'
+import { createCategory, createPart, fetchCategories, fetchParts } from '../services/parts.ts'
+import type { Category, Part } from '../types/part.ts'
 
 const ALL_CATEGORIES = 'Todas as categorias'
-const DEFAULT_CATEGORIES = [
-  'Lataria',
-  'Iluminação',
-  'Acabamento',
-  'Elétrica',
-  'Motor',
-  'Freios',
-  'Suspensão',
-]
 
 const dropdownItemClassName =
   'block w-full p-2 text-start hover:bg-neutral-tertiary-medium hover:text-heading rounded-md cursor-pointer'
 
 export default function Dashboard() {
-  const [categories, setCategories] = useState(DEFAULT_CATEGORIES)
+  const navigate = useNavigate()
+  const [categories, setCategories] = useState<Category[]>([])
   const [category, setCategory] = useState(ALL_CATEGORIES)
   const [isDropdownOpen, setIsDropdownOpen] = useState(false)
   const [isCreateOpen, setIsCreateOpen] = useState(false)
   const [parts, setParts] = useState<Part[]>([])
+  const [loadError, setLoadError] = useState('')
   const [openCategory, setOpenCategory] = useState<CategorySummary | null>(null)
   const dropdownRef = useRef<HTMLDivElement>(null)
+
+  // Sem sessão o RLS bloqueia tudo (e pecas.user_id = auth.uid()), então volta para o login.
+  useEffect(() => {
+    let cancelled = false
+
+    async function load() {
+      const { data } = await supabase.auth.getSession()
+      if (!data.session) {
+        navigate('/login', { replace: true })
+        return
+      }
+      try {
+        const [loadedCategories, loadedParts] = await Promise.all([fetchCategories(), fetchParts()])
+        if (cancelled) return
+        setCategories(loadedCategories)
+        setParts(loadedParts)
+      } catch (err) {
+        if (!cancelled) setLoadError(`Não foi possível carregar o catálogo: ${(err as Error).message}`)
+      }
+    }
+
+    load()
+    return () => {
+      cancelled = true
+    }
+  }, [navigate])
 
   // Contagem real de peças por categoria; categorias sem peças não aparecem.
   const categorySummaries = useMemo(() => {
     const counts = new Map<string, number>()
-    for (const part of parts) counts.set(part.category, (counts.get(part.category) ?? 0) + 1)
-    const summaries = categories
-      .filter((name) => (counts.get(name) ?? 0) > 0)
-      .map((name) => ({ name, count: counts.get(name) ?? 0 }))
-
-    // EXEMPLO - REMOVER
-    if (!counts.has(EXAMPLE_CATEGORY.name)) summaries.push(EXAMPLE_CATEGORY)
-
-    return summaries
+    for (const part of parts) counts.set(part.categoryId, (counts.get(part.categoryId) ?? 0) + 1)
+    return categories
+      .filter((item) => (counts.get(item.id) ?? 0) > 0)
+      .map((item) => ({ name: item.name, count: counts.get(item.id) ?? 0 }))
   }, [parts, categories])
 
   function openCategoryModal(category: CategorySummary) {
@@ -75,9 +89,18 @@ export default function Dashboard() {
     console.log({ category, query })
   }
 
-  function handleCreate(part: Part) {
-    // TODO: integrar com o cadastro de peças (por enquanto as peças ficam só em memória)
-    setParts((current) => [...current, part])
+  async function handleCreate(part: Part) {
+    // TODO: enviar part.photos quando existir bucket/tabela de fotos no Supabase.
+    const saved = await createPart(part)
+    setParts((current) => [saved, ...current])
+  }
+
+  async function handleAddCategory(name: string) {
+    const created = await createCategory(name)
+    setCategories((current) =>
+      [...current, created].sort((a, b) => a.name.localeCompare(b.name, 'pt-BR')),
+    )
+    return created
   }
 
   return (
@@ -148,7 +171,7 @@ export default function Dashboard() {
                       aria-labelledby="dropdown-button"
                       className="p-2 text-sm text-body font-medium"
                     >
-                      {[ALL_CATEGORIES, ...categories].map((item) => (
+                      {[ALL_CATEGORIES, ...categories.map((c) => c.name)].map((item) => (
                         <li key={item} role="option" aria-selected={item === category}>
                           <button
                             type="button"
@@ -229,13 +252,19 @@ export default function Dashboard() {
       <CreatePartModal
         open={isCreateOpen}
         categories={categories}
-        onAddCategory={(name) => setCategories((current) => [...current, name])}
+        onAddCategory={handleAddCategory}
         onClose={() => setIsCreateOpen(false)}
         onCreate={handleCreate}
       />
 
       <div className="flex-1 mt-8 overflow-y-auto">
         <h2>Catálogo de Peças</h2>
+
+        {loadError && (
+          <p role="alert" className="mt-4 text-sm font-medium text-red-400">
+            {loadError}
+          </p>
+        )}
 
         {categorySummaries.length > 0 && (
           // p-2 dá folga para o scale do hover não ser cortado pelo overflow do contêiner.

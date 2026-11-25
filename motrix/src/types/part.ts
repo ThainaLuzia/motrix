@@ -15,8 +15,19 @@ export interface PartCompatibility {
   side?: Side
 }
 
-export interface Part {
+/** Linha da tabela public.categorias. */
+export interface Category {
+  id: string
   name: string
+}
+
+export interface Part {
+  /** Gerado pelo banco; ausente enquanto a peça ainda não foi salva. */
+  id?: string
+  name: string
+  /** FK para categorias.id. */
+  categoryId: string
+  /** Nome da categoria (só para exibição). */
   category: string
   /** Número original (part number / OEM). Opcional. */
   oemNumber?: string
@@ -31,6 +42,6 @@ export interface Part {
   status: PartStatus
   /** Tags no formato tipo:valor (ex.: categoria:lataria, posicao:lado-esquerdo). */
   tags: string[]
-  /** Fotos da peça. */
+  /** Fotos da peça. Ainda não são enviadas ao Supabase (não há tabela/bucket para elas). */
   photos?: File[]
 }
