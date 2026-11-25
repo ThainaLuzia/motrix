@@ -5,6 +5,7 @@ import Navbar, { type NavbarUser } from '../components/Navbar.tsx'
 import PartCard from '../components/PartCard.tsx'
 import PartModal from '../components/PartModal.tsx'
 import Skeleton from '../components/Skeleton.tsx'
+import { primaryButtonClassName } from '../components/PartFormFields.tsx'
 import { partWithStatus } from '../lib/partForm.ts'
 import { supabase } from '../lib/supabase.ts'
 import {
@@ -132,7 +133,6 @@ export default function Dashboard() {
         category={category}
         categoryOptions={categoryOptions}
         onCategoryChange={setCategory}
-        onCreate={() => setIsCreateOpen(true)}
         user={user}
         onSignOut={handleSignOut}
       />
@@ -150,7 +150,37 @@ export default function Dashboard() {
         />
 
         <div className="flex-1 overflow-y-auto">
-          <h2>Catálogo de Peças</h2>
+          {/* Cabeçalho: título à esquerda e ações à direita; em telas pequenas as ações quebram para a linha de baixo. */}
+          <div className="flex flex-wrap items-center justify-between gap-4 px-2">
+            <h2 className="m-0 text-3xl font-bold text-heading">Produtos</h2>
+            <div className="flex flex-wrap items-center gap-3">
+              <button
+                type="button"
+                onClick={() => setIsCreateOpen(true)}
+                aria-haspopup="dialog"
+                className={primaryButtonClassName}
+              >
+                <svg
+                  className="w-4 h-4 me-1.5"
+                  aria-hidden="true"
+                  xmlns="http://www.w3.org/2000/svg"
+                  width="24"
+                  height="24"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    stroke="currentColor"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth="2"
+                    d="M5 12h14m-7 7V5"
+                  />
+                </svg>
+                Criar
+              </button>
+            </div>
+          </div>
 
           {loadError && (
             <p role="alert" className="mt-4 text-sm font-medium text-red-400">

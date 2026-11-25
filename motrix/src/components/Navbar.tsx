@@ -27,7 +27,6 @@ type NavbarProps = {
   /** Opções do filtro, já incluindo a opção "todas". */
   categoryOptions: string[]
   onCategoryChange: (category: string) => void
-  onCreate: () => void
   user: NavbarUser | null
   onSignOut: () => Promise<void>
 }
@@ -68,7 +67,6 @@ export default function Navbar({
   category,
   categoryOptions,
   onCategoryChange,
-  onCreate,
   user,
   onSignOut,
 }: NavbarProps) {
@@ -124,7 +122,7 @@ export default function Navbar({
           Motrix
         </h1>
 
-        <div className="col-span-2 flex w-full gap-2 md:col-span-1 md:col-start-2 md:row-start-1">
+        <div className="col-span-2 flex w-full md:col-span-1 md:col-start-2 md:row-start-1">
           <form className="min-w-0 flex-1" onSubmit={handleSearch}>
             <div className="flex shadow-xs rounded-base -space-x-0.5">
               <label htmlFor="search-dropdown" className="sr-only">
@@ -237,31 +235,6 @@ export default function Navbar({
               </button>
             </div>
           </form>
-          <button
-            type="button"
-            onClick={onCreate}
-            aria-haspopup="dialog"
-            className="inline-flex items-center text-body bg-neutral-secondary-medium box-border border border-default-strong hover:bg-neutral-tertiary-medium hover:text-heading focus:ring-4 focus:ring-neutral-tertiary shadow-xs font-medium leading-5 rounded-base text-sm px-3 sm:px-4 py-2.5 focus:outline-none cursor-pointer shrink-0"
-          >
-            <svg
-              className="w-4 h-4 sm:me-1.5"
-              aria-hidden="true"
-              xmlns="http://www.w3.org/2000/svg"
-              width="24"
-              height="24"
-              fill="none"
-              viewBox="0 0 24 24"
-            >
-              <path
-                stroke="currentColor"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth="2"
-                d="M5 12h14m-7 7V5"
-              />
-            </svg>
-            <span className="sr-only sm:not-sr-only">Criar</span>
-          </button>
         </div>
 
         <div ref={userRef} className="relative col-start-2 row-start-1 justify-self-end md:col-start-3">
