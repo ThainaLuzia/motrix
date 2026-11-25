@@ -1,4 +1,18 @@
-import { useEffect, useRef, useState, type RefObject, type SubmitEvent } from 'react'
+import {
+  useEffect,
+  useRef,
+  useState,
+  type MouseEvent as ReactMouseEvent,
+  type RefObject,
+  type SubmitEvent,
+  type SyntheticEvent,
+} from 'react'
+import {
+  dialogAnimationClassName,
+  dialogContentAnimationClassName,
+  primaryButtonClassName,
+  secondaryButtonClassName,
+} from './PartFormFields.tsx'
 
 export type NavbarUser = {
   name: string
@@ -63,6 +77,7 @@ export default function Navbar({
   const [isSigningOut, setIsSigningOut] = useState(false)
   const categoryRef = useRef<HTMLDivElement>(null)
   const userRef = useRef<HTMLDivElement>(null)
+  const signOutConfirmRef = useRef<HTMLDialogElement>(null)
 
   useDismiss(categoryRef, isCategoryOpen, setIsCategoryOpen)
   useDismiss(userRef, isUserOpen, setIsUserOpen)
@@ -72,13 +87,33 @@ export default function Navbar({
     event.preventDefault()
   }
 
+  function openSignOutConfirm() {
+    setIsUserOpen(false)
+    signOutConfirmRef.current?.showModal()
+  }
+
+  function closeSignOutConfirm() {
+    if (!isSigningOut) signOutConfirmRef.current?.close()
+  }
+
   async function handleSignOut() {
+    if (isSigningOut) return
     setIsSigningOut(true)
     try {
       await onSignOut()
+      signOutConfirmRef.current?.close()
     } finally {
       setIsSigningOut(false)
     }
+  }
+
+  // Esc fecha o popup, exceto enquanto o logout está em andamento.
+  function handleSignOutConfirmCancel(event: SyntheticEvent<HTMLDialogElement>) {
+    if (isSigningOut) event.preventDefault()
+  }
+
+  function handleSignOutConfirmBackdropClick(event: ReactMouseEvent<HTMLDialogElement>) {
+    if (event.target === event.currentTarget) closeSignOutConfirm()
   }
 
   return (
@@ -279,9 +314,9 @@ export default function Navbar({
                       <button
                         type="button"
                         role="menuitem"
-                        onClick={handleSignOut}
-                        disabled={isSigningOut}
-                        className={`${dropdownItemClassName} inline-flex items-center gap-2 disabled:opacity-60 disabled:cursor-wait`}
+                        onClick={openSignOutConfirm}
+                        aria-haspopup="dialog"
+                        className={`${dropdownItemClassName} inline-flex items-center gap-2`}
                       >
                         <svg
                           className="w-4 h-4"
@@ -300,7 +335,7 @@ export default function Navbar({
                             d="M20 12H8m12 0-4 4m4-4-4-4M9 4H7a3 3 0 0 0-3 3v10a3 3 0 0 0 3 3h2"
                           />
                         </svg>
-                        {isSigningOut ? 'Saindo...' : 'Sair'}
+                        Sair
                       </button>
                     </li>
                   </ul>
@@ -310,6 +345,56 @@ export default function Navbar({
           )}
         </div>
       </div>
+
+      <dialog
+        ref={signOutConfirmRef}
+        role="alertdialog"
+        aria-labelledby="sign-out-title"
+        onCancel={handleSignOutConfirmCancel}
+        onClick={handleSignOutConfirmBackdropClick}
+        className={`m-auto w-[calc(100%-2rem)] max-w-sm p-0 text-start bg-neutral-primary-medium border border-default-strong rounded-base shadow-lg backdrop:bg-black/60 ${dialogAnimationClassName}`}
+      >
+        <div className={`flex flex-col items-center gap-4 px-6 py-6 text-center ${dialogContentAnimationClassName}`}>
+          <svg
+            className="w-12 h-12 text-body"
+            aria-hidden="true"
+            xmlns="http://www.w3.org/2000/svg"
+            fill="none"
+            viewBox="0 0 24 24"
+          >
+            <path
+              stroke="currentColor"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth="2"
+              d="M20 12H8m12 0-4 4m4-4-4-4M9 4H7a3 3 0 0 0-3 3v10a3 3 0 0 0 3 3h2"
+            />
+          </svg>
+          <h3 id="sign-out-title" className="m-0 text-lg font-semibold text-heading">
+            Deseja mesmo sair?
+          </h3>
+          <div className="flex w-full flex-col-reverse gap-3 sm:flex-row sm:justify-center">
+            <button
+              type="button"
+              onClick={closeSignOutConfirm}
+              disabled={isSigningOut}
+              autoFocus
+              className={`${secondaryButtonClassName} disabled:cursor-not-allowed disabled:opacity-60`}
+            >
+              Cancelar
+            </button>
+            <button
+              type="button"
+              onClick={handleSignOut}
+              disabled={isSigningOut}
+              aria-busy={isSigningOut}
+              className={`${primaryButtonClassName} disabled:cursor-wait disabled:opacity-80`}
+            >
+              {isSigningOut ? 'Saindo...' : 'Sim, sair'}
+            </button>
+          </div>
+        </div>
+      </dialog>
     </nav>
   )
 }
