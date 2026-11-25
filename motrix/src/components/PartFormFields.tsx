@@ -45,8 +45,13 @@ export const inputClassName =
   'block w-full px-3 py-2.5 bg-neutral-secondary-medium border border-default-strong text-heading text-sm rounded-base focus:ring-brand focus:border-brand shadow-xs placeholder:text-body'
 const fieldsetClassName = 'grid grid-cols-1 gap-4 sm:grid-cols-2'
 export const legendClassName = 'mb-4 text-base font-semibold text-heading'
-const radioClassName =
-  'w-4 h-4 text-brand bg-neutral-secondary-medium border-default-strong focus:ring-brand focus:ring-2 cursor-pointer'
+// Radio customizado: o <input> fica sr-only (continua acessível e navegável pelo teclado) e o círculo
+// visível é o <span> irmão, estilizado via peer-checked / peer-focus-visible.
+const radioLabelClassName = 'relative inline-flex items-center gap-3 text-sm text-body cursor-pointer'
+const radioInputClassName = 'peer sr-only'
+const radioCircleClassName =
+  'grid size-6 shrink-0 place-items-center rounded-full border-2 border-default-strong bg-neutral-secondary-medium transition-colors duration-200 after:size-full after:scale-0 after:rounded-full after:bg-brand after:transition-transform after:duration-300 after:ease-[cubic-bezier(.34,1.9,.64,1)] peer-checked:border-brand peer-checked:after:scale-100 peer-focus-visible:ring-4 peer-focus-visible:ring-brand-medium motion-reduce:transition-none motion-reduce:after:transition-none'
+const radioTextClassName = 'transition-colors peer-checked:font-medium peer-checked:text-heading'
 export const secondaryButtonClassName =
   'inline-flex items-center justify-center text-body bg-neutral-secondary-medium box-border border border-default-strong hover:bg-neutral-tertiary-medium hover:text-heading focus:ring-4 focus:ring-neutral-tertiary font-medium leading-5 rounded-base text-sm px-4 py-2.5 focus:outline-none cursor-pointer'
 export const primaryButtonClassName =
@@ -418,16 +423,17 @@ export default function PartFormFields({
             <legend className={labelClassName}>Posição</legend>
             <div className="flex flex-wrap gap-x-4 gap-y-2">
               {AXLES.map((item) => (
-                <label key={item.label} className="inline-flex items-center gap-2 text-sm text-heading cursor-pointer">
+                <label key={item.label} className={radioLabelClassName}>
                   <input
                     type="radio"
                     name={id('axle')}
                     value={item.value}
                     checked={form.axle === item.value}
                     onChange={() => update('axle', item.value)}
-                    className={radioClassName}
+                    className={radioInputClassName}
                   />
-                  {item.label}
+                  <span aria-hidden="true" className={radioCircleClassName} />
+                  <span className={radioTextClassName}>{item.label}</span>
                 </label>
               ))}
             </div>
@@ -436,16 +442,17 @@ export default function PartFormFields({
             <legend className={labelClassName}>Lado</legend>
             <div className="flex flex-wrap gap-x-4 gap-y-2">
               {SIDES.map((item) => (
-                <label key={item.label} className="inline-flex items-center gap-2 text-sm text-heading cursor-pointer">
+                <label key={item.label} className={radioLabelClassName}>
                   <input
                     type="radio"
                     name={id('side')}
                     value={item.value}
                     checked={form.side === item.value}
                     onChange={() => update('side', item.value)}
-                    className={radioClassName}
+                    className={radioInputClassName}
                   />
-                  {item.label}
+                  <span aria-hidden="true" className={radioCircleClassName} />
+                  <span className={radioTextClassName}>{item.label}</span>
                 </label>
               ))}
             </div>
