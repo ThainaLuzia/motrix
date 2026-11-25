@@ -55,7 +55,9 @@
     box-sizing: border-box;
   }
 
+  /* Na dashboard a navbar ocupa a largura toda; o conteúdo se limita dentro do próprio #dashboard. */
   #root:has(#dashboard) {
+    width: 100%;
     border-inline: none;
   }
 
