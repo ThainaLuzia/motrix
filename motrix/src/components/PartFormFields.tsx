@@ -58,6 +58,14 @@ export const primaryButtonClassName =
   'inline-flex items-center justify-center text-[#16171d] bg-[#bed084] hover:bg-[#a9bd6c] box-border border border-transparent focus:ring-4 focus:ring-brand-medium shadow-xs font-medium leading-5 rounded-base text-sm px-4 py-2.5 focus:outline-none cursor-pointer'
 export const dangerButtonClassName =
   'inline-flex items-center justify-center text-white bg-red-600 hover:bg-red-700 box-border border border-transparent focus:ring-4 focus:ring-red-500/40 shadow-xs font-medium leading-5 rounded-base text-sm px-4 py-2.5 focus:outline-none cursor-pointer'
+// Animação dos <dialog> nativos: ao abrir, o painel "desdobra" na vertical (scale-y 0 → 100) e o backdrop
+// aparece com blur; ao fechar, o caminho inverso. @starting-style (starting:) define o estado inicial da
+// abertura e transition-discrete mantém o dialog no top layer até a transição de fechamento terminar.
+export const dialogAnimationClassName =
+  'transition-[display,overlay,scale] transition-discrete duration-300 ease-out starting:scale-y-0 not-open:scale-y-0 backdrop:backdrop-blur-sm backdrop:transition-[display,overlay,opacity] backdrop:transition-discrete backdrop:duration-300 starting:backdrop:opacity-0 not-open:backdrop:opacity-0 motion-reduce:transition-none motion-reduce:backdrop:transition-none'
+// Conteúdo do dialog: sobe e aparece depois que o painel terminou de abrir.
+export const dialogContentAnimationClassName =
+  'transition duration-300 delay-200 ease-out starting:translate-y-2 starting:opacity-0 motion-reduce:transition-none'
 const dropdownButtonClassName =
   'flex w-full items-center justify-between gap-2 px-3 py-2.5 bg-neutral-secondary-medium border border-default-strong text-sm text-start rounded-base shadow-xs hover:bg-neutral-tertiary-medium focus:ring-4 focus:ring-brand-medium focus:border-brand focus:outline-none cursor-pointer'
 const dropdownItemClassName =

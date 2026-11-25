@@ -10,6 +10,8 @@ import type { Category, Part } from '../types/part.ts'
 import { isAllowedPhoto, PHOTO_MIME_TYPES } from '../services/parts.ts'
 import { INITIAL_FORM, partFromForm, validatePartForm, type FormState } from '../lib/partForm.ts'
 import PartFormFields, {
+  dialogAnimationClassName,
+  dialogContentAnimationClassName,
   legendClassName,
   primaryButtonClassName,
   secondaryButtonClassName,
@@ -245,9 +247,9 @@ export default function CreatePartModal({
       ref={dialogRef}
       onClose={onClose}
       aria-labelledby="create-part-title"
-      className="m-auto w-[calc(100%-2rem)] max-w-3xl max-h-[90svh] overflow-hidden open:flex open:flex-col p-0 text-start bg-neutral-primary-medium border border-default-strong rounded-base shadow-lg backdrop:bg-black/60"
+      className={`m-auto w-[calc(100%-2rem)] max-w-3xl max-h-[90svh] overflow-hidden open:flex open:flex-col p-0 text-start bg-neutral-primary-medium border border-default-strong rounded-base shadow-lg backdrop:bg-black/60 ${dialogAnimationClassName}`}
     >
-      <form className="flex min-h-0 flex-1 flex-col" onSubmit={handleSubmit}>
+      <form className={`flex min-h-0 flex-1 flex-col ${dialogContentAnimationClassName}`} onSubmit={handleSubmit}>
         <div className="flex shrink-0 items-center justify-between gap-4 border-b border-default-strong px-4 py-4 sm:px-6">
           <h2 id="create-part-title" className="m-0 text-xl font-semibold text-heading">
             Criar peça

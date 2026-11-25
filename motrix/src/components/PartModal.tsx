@@ -17,6 +17,8 @@ import {
 } from '../lib/partForm.ts'
 import PartFormFields, {
   dangerButtonClassName,
+  dialogAnimationClassName,
+  dialogContentAnimationClassName,
   legendClassName,
   primaryButtonClassName,
   secondaryButtonClassName,
@@ -169,7 +171,7 @@ function PartEditor({ part, categories, onAddCategory, onClose, onSave, onDelete
 
   return (
     <>
-      <form className="flex min-h-0 flex-1 flex-col" onSubmit={handleSubmit}>
+      <form className={`flex min-h-0 flex-1 flex-col ${dialogContentAnimationClassName}`} onSubmit={handleSubmit}>
         <div className="flex shrink-0 items-center justify-between gap-4 border-b border-default-strong px-4 py-4 sm:px-6">
           <h2 id="part-modal-title" className="m-0 min-w-0 truncate text-xl font-semibold text-heading">
             {part.name}
@@ -240,9 +242,9 @@ function PartEditor({ part, categories, onAddCategory, onClose, onSave, onDelete
         aria-describedby="delete-part-description"
         onCancel={handleConfirmCancel}
         onClick={handleConfirmBackdropClick}
-        className="m-auto w-[calc(100%-2rem)] max-w-md p-0 text-start bg-neutral-primary-medium border border-default-strong rounded-base shadow-lg backdrop:bg-black/60"
+        className={`m-auto w-[calc(100%-2rem)] max-w-md p-0 text-start bg-neutral-primary-medium border border-default-strong rounded-base shadow-lg backdrop:bg-black/60 ${dialogAnimationClassName}`}
       >
-        <div className="flex flex-col items-center gap-4 px-6 py-6 text-center">
+        <div className={`flex flex-col items-center gap-4 px-6 py-6 text-center ${dialogContentAnimationClassName}`}>
           <svg
             className="w-12 h-12 text-red-400"
             aria-hidden="true"
@@ -299,6 +301,18 @@ function PartEditor({ part, categories, onAddCategory, onClose, onSave, onDelete
 export default function PartModal({ part, ...props }: PartModalProps) {
   const dialogRef = useRef<HTMLDialogElement>(null)
   const open = part !== null
+  // Mantém a última peça na tela enquanto a animação de fechamento roda (part já virou null).
+  // A cada nova abertura o session muda e o editor remonta, descartando edições não salvas.
+  const [prevPart, setPrevPart] = useState(part)
+  const [shownPart, setShownPart] = useState(part)
+  const [session, setSession] = useState(0)
+  if (part !== prevPart) {
+    setPrevPart(part)
+    if (part) {
+      setShownPart(part)
+      if (!prevPart) setSession((current) => current + 1)
+    }
+  }
 
   useEffect(() => {
     const dialog = dialogRef.current
@@ -342,9 +356,11 @@ export default function PartModal({ part, ...props }: PartModalProps) {
       onClose={handleClose}
       onClick={handleBackdropClick}
       aria-labelledby="part-modal-title"
-      className="m-auto w-[calc(100%-2rem)] max-w-3xl max-h-[90svh] overflow-hidden open:flex open:flex-col p-0 text-start bg-neutral-primary-medium border border-default-strong rounded-base shadow-lg backdrop:bg-black/60"
+      className={`m-auto w-[calc(100%-2rem)] max-w-3xl max-h-[90svh] overflow-hidden open:flex open:flex-col p-0 text-start bg-neutral-primary-medium border border-default-strong rounded-base shadow-lg backdrop:bg-black/60 ${dialogAnimationClassName}`}
     >
-      {part?.id && <PartEditor key={part.id} part={{ ...part, id: part.id }} {...props} />}
+      {shownPart?.id && (
+        <PartEditor key={`${session}-${shownPart.id}`} part={{ ...shownPart, id: shownPart.id }} {...props} />
+      )}
     </dialog>
   )
 }
