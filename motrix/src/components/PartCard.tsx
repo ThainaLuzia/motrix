@@ -1,14 +1,106 @@
+import { useEffect, useRef, useState } from 'react'
+import { STATUSES } from '../lib/partForm.ts'
 import { AXLE_LABELS, formatPrice, SIDE_LABELS, STATUS_BADGES } from '../lib/partLabels.ts'
 import type { Part, PartStatus } from '../types/part.ts'
 
+const badgeClassName =
+  'inline-flex shrink-0 items-center rounded-full px-2.5 py-0.5 text-xs font-medium ring-1 ring-inset'
+const dropdownItemClassName =
+  'flex w-full items-center p-2 text-start hover:bg-neutral-tertiary-medium rounded cursor-pointer'
+
 export function StatusBadge({ status }: { status: PartStatus }) {
   const badge = STATUS_BADGES[status]
+  return <span className={`${badgeClassName} ${badge.className}`}>{badge.label}</span>
+}
+
+interface StatusDropdownProps {
+  id: string
+  status: PartStatus
+  disabled?: boolean
+  onChange: (status: PartStatus) => void
+}
+
+/** Badge de status que abre um dropdown para trocar o status (mesmo padrão do Dropdown do formulário). */
+function StatusDropdown({ id, status, disabled, onChange }: StatusDropdownProps) {
+  const [isOpen, setIsOpen] = useState(false)
+  const containerRef = useRef<HTMLDivElement>(null)
+  const buttonRef = useRef<HTMLButtonElement>(null)
+  const menuId = `${id}-menu`
+  const badge = STATUS_BADGES[status]
+
+  useEffect(() => {
+    if (!isOpen) return
+    function handleClickOutside(event: MouseEvent) {
+      if (!containerRef.current?.contains(event.target as Node)) setIsOpen(false)
+    }
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => document.removeEventListener('mousedown', handleClickOutside)
+  }, [isOpen])
+
+  function close() {
+    setIsOpen(false)
+    buttonRef.current?.focus()
+  }
+
+  function select(option: PartStatus) {
+    close()
+    if (option !== status) onChange(option)
+  }
+
   return (
-    <span
-      className={`inline-flex shrink-0 items-center rounded-full px-2.5 py-0.5 text-xs font-medium ring-1 ring-inset ${badge.className}`}
+    <div
+      ref={containerRef}
+      className="relative z-10 shrink-0"
+      onKeyDown={(event) => {
+        if (event.key === 'Escape' && isOpen) {
+          event.preventDefault()
+          event.stopPropagation()
+          close()
+        }
+      }}
     >
-      {badge.label}
-    </span>
+      <button
+        ref={buttonRef}
+        id={id}
+        type="button"
+        disabled={disabled}
+        onClick={() => setIsOpen((v) => !v)}
+        aria-haspopup="listbox"
+        aria-expanded={isOpen}
+        aria-controls={menuId}
+        aria-label={`Status: ${badge.label}. Alterar status`}
+        className={`${badgeClassName} ${badge.className} gap-1 cursor-pointer hover:brightness-125 focus:outline-none focus-visible:ring-2 disabled:cursor-wait disabled:opacity-60`}
+      >
+        {badge.label}
+        <svg
+          className="w-3 h-3 -me-1"
+          aria-hidden="true"
+          xmlns="http://www.w3.org/2000/svg"
+          width="24"
+          height="24"
+          fill="none"
+          viewBox="0 0 24 24"
+        >
+          <path stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="m19 9-7 7-7-7" />
+        </svg>
+      </button>
+      {isOpen && (
+        <div
+          id={menuId}
+          className="absolute end-0 top-full mt-1 z-20 w-44 bg-neutral-primary-medium border border-default-medium rounded-base shadow-lg"
+        >
+          <ul role="listbox" aria-labelledby={id} className="p-2 text-sm text-body font-medium">
+            {STATUSES.map((option) => (
+              <li key={option.value} role="option" aria-selected={option.value === status}>
+                <button type="button" onClick={() => select(option.value)} className={dropdownItemClassName}>
+                  <StatusBadge status={option.value} />
+                </button>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+    </div>
   )
 }
 
@@ -38,21 +130,35 @@ export function PhotoPlaceholder() {
 interface PartCardProps {
   part: Part
   onOpen: (part: Part) => void
+  /** Salva o novo status no banco; se rejeitar, o card mostra o erro. */
+  onStatusChange: (part: Part, status: PartStatus) => Promise<void>
 }
 
-export default function PartCard({ part, onOpen }: PartCardProps) {
+export default function PartCard({ part, onOpen, onStatusChange }: PartCardProps) {
+  const [isSavingStatus, setIsSavingStatus] = useState(false)
+  const [statusError, setStatusError] = useState('')
   const { brand, model, axle, side } = part.compatibility
   const cover = part.photoUrls?.[0]
   const position = [axle && AXLE_LABELS[axle], side && SIDE_LABELS[side]].filter(Boolean).join(' · ')
 
+  async function handleStatusChange(status: PartStatus) {
+    setIsSavingStatus(true)
+    setStatusError('')
+    try {
+      await onStatusChange(part, status)
+    } catch (err) {
+      setStatusError(`Não foi possível alterar o status: ${(err as Error).message}`)
+    } finally {
+      setIsSavingStatus(false)
+    }
+  }
+
   return (
-    <button
-      type="button"
-      onClick={() => onOpen(part)}
-      aria-haspopup="dialog"
-      // No Tailwind v4, hover: só vale em dispositivos com hover real, então o efeito não fica preso após o toque.
-      className="flex w-full items-stretch gap-4 overflow-hidden p-3 text-start bg-neutral-secondary-medium border border-default-strong rounded-base shadow-xs cursor-pointer select-none [-webkit-tap-highlight-color:transparent] transition duration-200 ease-out hover:bg-neutral-tertiary-medium hover:shadow-lg hover:-translate-y-0.5 active:translate-y-0 focus:outline-none focus-visible:ring-4 focus-visible:ring-brand-medium motion-reduce:transition-none"
-    >
+    // O card não pode ser um <button> porque tem o dropdown de status dentro (botão dentro de botão é inválido).
+    // O botão do nome cobre o card todo com ::after (abre o modal); o dropdown fica acima dele (z-10).
+    // has-[[aria-expanded=true]] sobe o card aberto para o menu não ficar atrás do card seguinte.
+    // No Tailwind v4, hover: só vale em dispositivos com hover real, então o efeito não fica preso após o toque.
+    <div className="relative flex w-full items-stretch gap-4 p-3 text-start bg-neutral-secondary-medium border border-default-strong rounded-base shadow-xs select-none transition duration-200 ease-out hover:bg-neutral-tertiary-medium hover:shadow-lg hover:-translate-y-0.5 has-[[aria-expanded=true]]:z-10 motion-reduce:transition-none">
       <div className="aspect-[4/3] w-28 shrink-0 overflow-hidden rounded-base sm:w-44">
         {cover ? (
           <img src={cover} alt={part.name} loading="lazy" className="h-full w-full object-cover" />
@@ -64,9 +170,25 @@ export default function PartCard({ part, onOpen }: PartCardProps) {
       <div className="flex min-w-0 flex-1 flex-col gap-1">
         <div className="flex items-start justify-between gap-2">
           <h3 className="m-0 min-w-0 truncate text-base font-semibold text-heading sm:text-lg">
-            {part.name}
+            <button
+              type="button"
+              onClick={() => onOpen(part)}
+              aria-haspopup="dialog"
+              className="max-w-full truncate text-start cursor-pointer [-webkit-tap-highlight-color:transparent] focus:outline-none after:absolute after:inset-0 after:rounded-base focus-visible:after:ring-4 focus-visible:after:ring-brand-medium"
+            >
+              {part.name}
+            </button>
           </h3>
-          <StatusBadge status={part.status} />
+          {part.id ? (
+            <StatusDropdown
+              id={`part-status-${part.id}`}
+              status={part.status}
+              disabled={isSavingStatus}
+              onChange={handleStatusChange}
+            />
+          ) : (
+            <StatusBadge status={part.status} />
+          )}
         </div>
 
         {part.category && <p className="m-0 truncate text-sm text-body">{part.category}</p>}
@@ -81,7 +203,13 @@ export default function PartCard({ part, onOpen }: PartCardProps) {
         <p className="m-0 mt-auto pt-1 text-base font-semibold text-heading">
           {formatPrice(part.salePrice)}
         </p>
+
+        {statusError && (
+          <p role="alert" className="m-0 text-xs font-medium text-red-400">
+            {statusError}
+          </p>
+        )}
       </div>
-    </button>
+    </div>
   )
 }

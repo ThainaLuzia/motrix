@@ -126,6 +126,12 @@ export function manualTagsFromPart(part: Part) {
   return part.tags.filter((tag) => !autoTags.has(tag))
 }
 
+/** A mesma peça com outro status; as tags automáticas (destino:*) acompanham a mudança. */
+export function partWithStatus(part: Part, status: PartStatus): Part {
+  const form = { ...formFromPart(part), status }
+  return { ...part, ...partFromForm(form, part.category, manualTagsFromPart(part)) }
+}
+
 /** Mensagem de erro se o formulário não puder ser salvo; null se estiver ok. */
 export function validatePartForm(form: FormState) {
   if (!form.categoryId) return 'Selecione ou adicione uma categoria.'

@@ -4,6 +4,7 @@ import CreatePartModal from '../components/CreatePartModal.tsx'
 import PartCard from '../components/PartCard.tsx'
 import PartModal from '../components/PartModal.tsx'
 import Skeleton from '../components/Skeleton.tsx'
+import { partWithStatus } from '../lib/partForm.ts'
 import { supabase } from '../lib/supabase.ts'
 import {
   createCategory,
@@ -13,7 +14,7 @@ import {
   fetchParts,
   updatePart,
 } from '../services/parts.ts'
-import type { Category, Part } from '../types/part.ts'
+import type { Category, Part, PartStatus } from '../types/part.ts'
 
 const ALL_CATEGORIES = 'Todas as categorias'
 
@@ -96,6 +97,11 @@ export default function Dashboard() {
   async function handleSave(id: string, part: Part) {
     const saved = await updatePart(id, part)
     setParts((current) => current.map((item) => (item.id === id ? saved : item)))
+  }
+
+  async function handleStatusChange(part: Part, status: PartStatus) {
+    if (!part.id) return
+    await handleSave(part.id, partWithStatus(part, status))
   }
 
   async function handleDelete(id: string) {
@@ -290,7 +296,7 @@ export default function Dashboard() {
           <ul className="mt-4 flex flex-col gap-3 p-2">
             {parts.map((part, index) => (
               <li key={part.id ?? index}>
-                <PartCard part={part} onOpen={setOpenPart} />
+                <PartCard part={part} onOpen={setOpenPart} onStatusChange={handleStatusChange} />
               </li>
             ))}
           </ul>
