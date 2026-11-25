@@ -50,12 +50,12 @@ export const legendClassName = 'mb-4 text-base font-semibold text-heading'
 const radioLabelClassName = 'relative inline-flex items-center gap-3 text-sm text-body cursor-pointer'
 const radioInputClassName = 'peer sr-only'
 const radioCircleClassName =
-  'grid size-6 shrink-0 place-items-center rounded-full border-2 border-default-strong bg-neutral-secondary-medium transition-colors duration-200 after:size-full after:scale-0 after:rounded-full after:bg-brand after:transition-transform after:duration-300 after:ease-[cubic-bezier(.34,1.9,.64,1)] peer-checked:border-brand peer-checked:after:scale-100 peer-focus-visible:ring-4 peer-focus-visible:ring-brand-medium motion-reduce:transition-none motion-reduce:after:transition-none'
+  'grid size-6 shrink-0 place-items-center rounded-full border-2 border-default-strong bg-neutral-secondary-medium transition-colors duration-200 after:size-full after:scale-0 after:rounded-full after:bg-[#bed084] after:transition-transform after:duration-300 after:ease-[cubic-bezier(.34,1.9,.64,1)] peer-checked:border-[#bed084] peer-checked:after:scale-100 peer-focus-visible:ring-4 peer-focus-visible:ring-[#bed084]/40 motion-reduce:transition-none motion-reduce:after:transition-none'
 const radioTextClassName = 'transition-colors peer-checked:font-medium peer-checked:text-heading'
 export const secondaryButtonClassName =
   'inline-flex items-center justify-center text-body bg-neutral-secondary-medium box-border border border-default-strong hover:bg-neutral-tertiary-medium hover:text-heading focus:ring-4 focus:ring-neutral-tertiary font-medium leading-5 rounded-base text-sm px-4 py-2.5 focus:outline-none cursor-pointer'
 export const primaryButtonClassName =
-  'inline-flex items-center justify-center text-white bg-brand hover:bg-brand-strong box-border border border-transparent focus:ring-4 focus:ring-brand-medium shadow-xs font-medium leading-5 rounded-base text-sm px-4 py-2.5 focus:outline-none cursor-pointer'
+  'inline-flex items-center justify-center text-[#16171d] bg-[#bed084] hover:bg-[#a9bd6c] box-border border border-transparent focus:ring-4 focus:ring-brand-medium shadow-xs font-medium leading-5 rounded-base text-sm px-4 py-2.5 focus:outline-none cursor-pointer'
 export const dangerButtonClassName =
   'inline-flex items-center justify-center text-white bg-red-600 hover:bg-red-700 box-border border border-transparent focus:ring-4 focus:ring-red-500/40 shadow-xs font-medium leading-5 rounded-base text-sm px-4 py-2.5 focus:outline-none cursor-pointer'
 const dropdownButtonClassName =

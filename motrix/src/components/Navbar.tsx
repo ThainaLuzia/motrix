@@ -180,7 +180,7 @@ export default function Navbar({
               />
               <button
                 type="submit"
-                className="inline-flex items-center text-white bg-brand hover:bg-brand-strong box-border border border-transparent focus:ring-4 focus:ring-brand-medium shadow-xs font-medium leading-5 rounded-e-base text-sm px-3 sm:px-4 py-2.5 focus:outline-none cursor-pointer shrink-0"
+                className="inline-flex items-center text-[#16171d] bg-[#bed084] hover:bg-[#a9bd6c] box-border border border-transparent focus:ring-4 focus:ring-brand-medium shadow-xs font-medium leading-5 rounded-e-base text-sm px-3 sm:px-4 py-2.5 focus:outline-none cursor-pointer shrink-0"
               >
                 <svg
                   className="w-4 h-4 sm:me-1.5"
@@ -247,7 +247,7 @@ export default function Navbar({
                 ) : (
                   <span
                     aria-hidden="true"
-                    className="flex w-8 h-8 items-center justify-center rounded-full bg-brand text-xs font-semibold text-white"
+                    className="flex w-8 h-8 items-center justify-center rounded-full bg-[#bed084] text-xs font-semibold text-[#16171d]"
                   >
                     {initials(user.name)}
                   </span>
@@ -264,7 +264,7 @@ export default function Navbar({
                     ) : (
                       <span
                         aria-hidden="true"
-                        className="flex w-9 h-9 shrink-0 items-center justify-center rounded-full bg-brand text-xs font-semibold text-white"
+                        className="flex w-9 h-9 shrink-0 items-center justify-center rounded-full bg-[#bed084] text-xs font-semibold text-[#16171d]"
                       >
                         {initials(user.name)}
                       </span>

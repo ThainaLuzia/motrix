@@ -217,7 +217,7 @@ export default function Login() {
             type="submit"
             disabled={isLoading}
             aria-busy={isLoading}
-            className="inline-flex w-full items-center justify-center text-white bg-brand hover:bg-brand-strong focus:ring-4 focus:ring-brand-medium shadow-xs font-medium rounded-base text-sm px-4 py-2.5 focus:outline-none cursor-pointer disabled:cursor-wait disabled:opacity-80"
+            className="inline-flex w-full items-center justify-center text-[#16171d] bg-[#bed084] hover:bg-[#a9bd6c] focus:ring-4 focus:ring-brand-medium shadow-xs font-medium rounded-base text-sm px-4 py-2.5 focus:outline-none cursor-pointer disabled:cursor-wait disabled:opacity-80"
           >
             {isLoading ? (
               <>
