@@ -8,6 +8,11 @@ const badgeClassName =
 const dropdownItemClassName =
   'flex w-full items-center p-2 text-start hover:bg-neutral-tertiary-medium rounded cursor-pointer'
 
+
+export const partRowGridClassName =
+  'grid grid-cols-[4rem_minmax(0,1fr)_auto] items-center gap-x-3 gap-y-0.5 md:grid-cols-[4rem_minmax(0,2.2fr)_minmax(0,1fr)_minmax(0,1.4fr)_minmax(0,1.2fr)_minmax(0,1fr)_8rem] md:gap-x-4'
+const cellClassName = 'col-span-2 m-0 truncate text-sm text-body md:col-span-1'
+
 export function StatusBadge({ status }: { status: PartStatus }) {
   const badge = STATUS_BADGES[status]
   return <span className={`${badgeClassName} ${badge.className}`}>{badge.label}</span>
@@ -20,7 +25,7 @@ interface StatusDropdownProps {
   onChange: (status: PartStatus) => void
 }
 
-/** Badge de status que abre um dropdown para trocar o status (mesmo padrão do Dropdown do formulário). */
+
 function StatusDropdown({ id, status, disabled, onChange }: StatusDropdownProps) {
   const [isOpen, setIsOpen] = useState(false)
   const containerRef = useRef<HTMLDivElement>(null)
@@ -157,9 +162,12 @@ export default function PartCard({ part, onOpen, onStatusChange }: PartCardProps
     // O card não pode ser um <button> porque tem o dropdown de status dentro (botão dentro de botão é inválido).
     // O botão do nome cobre o card todo com ::after (abre o modal); o dropdown fica acima dele (z-10).
     // has-[[aria-expanded=true]] sobe o card aberto para o menu não ficar atrás do card seguinte.
+    // isolate prende o z-10 do badge dentro de cada card; sem ele o badge do card seguinte ficaria por cima do menu aberto.
     // No Tailwind v4, hover: só vale em dispositivos com hover real, então o efeito não fica preso após o toque.
-    <div className="relative flex w-full items-stretch gap-4 p-3 text-start bg-neutral-secondary-medium border border-default-strong rounded-base shadow-xs select-none transition duration-200 ease-out hover:bg-neutral-tertiary-medium hover:shadow-lg hover:-translate-y-0.5 has-[[aria-expanded=true]]:z-10 motion-reduce:transition-none">
-      <div className="aspect-[4/3] w-28 shrink-0 overflow-hidden rounded-base sm:w-44">
+    <div
+      className={`${partRowGridClassName} relative isolate w-full px-3 py-2 text-start bg-neutral-secondary-medium border border-default-strong rounded-base shadow-xs select-none transition duration-200 ease-out hover:bg-neutral-tertiary-medium hover:shadow-lg hover:-translate-y-0.5 has-[[aria-expanded=true]]:z-10 motion-reduce:transition-none`}
+    >
+      <div className="row-span-5 size-16 self-start overflow-hidden rounded-base md:row-span-1 md:self-center">
         {cover ? (
           <img src={cover} alt={part.name} loading="lazy" className="h-full w-full object-cover" />
         ) : (
@@ -167,49 +175,49 @@ export default function PartCard({ part, onOpen, onStatusChange }: PartCardProps
         )}
       </div>
 
-      <div className="flex min-w-0 flex-1 flex-col gap-1">
-        <div className="flex items-start justify-between gap-2">
-          <h3 className="m-0 min-w-0 truncate text-base font-semibold text-heading sm:text-lg">
-            <button
-              type="button"
-              onClick={() => onOpen(part)}
-              aria-haspopup="dialog"
-              className="max-w-full truncate text-start cursor-pointer [-webkit-tap-highlight-color:transparent] focus:outline-none after:absolute after:inset-0 after:rounded-base focus-visible:after:ring-4 focus-visible:after:ring-brand-medium"
-            >
-              {part.name}
-            </button>
-          </h3>
-          {part.id ? (
-            <StatusDropdown
-              id={`part-status-${part.id}`}
-              status={part.status}
-              disabled={isSavingStatus}
-              onChange={handleStatusChange}
-            />
-          ) : (
-            <StatusBadge status={part.status} />
-          )}
-        </div>
+      <h3 className="m-0 min-w-0 truncate text-lg font-bold text-heading md:text-xl">
+        <button
+          type="button"
+          onClick={() => onOpen(part)}
+          aria-haspopup="dialog"
+          className="max-w-full truncate text-start cursor-pointer [-webkit-tap-highlight-color:transparent] focus:outline-none after:absolute after:inset-0 after:rounded-base focus-visible:after:ring-4 focus-visible:after:ring-brand-medium"
+        >
+          {part.name}
+        </button>
+      </h3>
 
-        {part.category && <p className="m-0 truncate text-sm text-body">{part.category}</p>}
+      {/* Colunas vazias continuam renderizadas no md+ para não desalinhar a "tabela". */}
+      <p className={`${cellClassName} ${part.category ? '' : 'hidden md:block'}`}>{part.category || '—'}</p>
 
-        <p className="m-0 truncate text-sm text-body">
-          {brand} {model}
-          {part.color && ` · ${part.color}`}
-        </p>
+      <p className={cellClassName}>
+        {brand} {model}
+        {part.color && ` · ${part.color}`}
+      </p>
 
-        {position && <p className="m-0 truncate text-sm text-body">{position}</p>}
+      <p className={`${cellClassName} ${position ? '' : 'hidden md:block'}`}>{position || '—'}</p>
 
-        <p className="m-0 mt-auto pt-1 text-base font-semibold text-heading">
-          {formatPrice(part.salePrice)}
-        </p>
+      <p className="col-span-2 m-0 truncate text-base font-semibold text-heading tabular-nums md:col-span-1">
+        {formatPrice(part.salePrice)}
+      </p>
 
-        {statusError && (
-          <p role="alert" className="m-0 text-xs font-medium text-red-400">
-            {statusError}
-          </p>
+      <div className="col-start-3 row-start-1 flex justify-end self-start md:col-start-auto md:row-start-auto md:self-center">
+        {part.id ? (
+          <StatusDropdown
+            id={`part-status-${part.id}`}
+            status={part.status}
+            disabled={isSavingStatus}
+            onChange={handleStatusChange}
+          />
+        ) : (
+          <StatusBadge status={part.status} />
         )}
       </div>
+
+      {statusError && (
+        <p role="alert" className="col-span-full m-0 mt-1 text-xs font-medium text-red-400">
+          {statusError}
+        </p>
+      )}
     </div>
   )
 }

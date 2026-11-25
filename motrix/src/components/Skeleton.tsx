@@ -1,3 +1,5 @@
+import { partRowGridClassName } from './PartCard.tsx'
+
 interface SkeletonProps {
   label?: string
   /** Quantos cards de placeholder exibir. */
@@ -5,35 +7,36 @@ interface SkeletonProps {
 }
 
 const barClassName = 'bg-neutral-quaternary rounded-full'
+const cellClassName = 'col-span-2 flex h-5 items-center md:col-span-1'
 
-/** Placeholder com o mesmo formato do PartCard (foto 4:3 à esquerda, textos e preço à direita). */
+/** Placeholder com o mesmo formato do PartCard (linha única no md+, empilhado no celular). */
 function PartCardSkeleton() {
   return (
-    <div className="flex w-full items-stretch gap-4 p-3 bg-neutral-secondary-medium border border-default-strong rounded-base shadow-xs">
-      <div className="aspect-[4/3] w-28 shrink-0 rounded-base bg-neutral-quaternary sm:w-44" />
-
-      <div className="flex min-w-0 flex-1 flex-col gap-1">
-        {/* Nome + badge de status */}
-        <div className="flex items-start justify-between gap-2">
-          <div className="flex h-6 flex-1 items-center sm:h-7">
-            <div className={`${barClassName} h-3 w-3/5 max-w-56`} />
-          </div>
-          <div className={`${barClassName} h-5 w-16 shrink-0`} />
-        </div>
-        {/* Categoria, marca/modelo e posição */}
-        <div className="flex h-5 items-center">
-          <div className={`${barClassName} h-2 w-1/3 max-w-32`} />
-        </div>
-        <div className="flex h-5 items-center">
-          <div className={`${barClassName} h-2 w-1/2 max-w-48`} />
-        </div>
-        <div className="flex h-5 items-center">
-          <div className={`${barClassName} h-2 w-1/4 max-w-28`} />
-        </div>
-        {/* Preço */}
-        <div className="mt-auto flex h-7 items-end pt-1">
-          <div className={`${barClassName} h-3 w-20`} />
-        </div>
+    <div
+      className={`${partRowGridClassName} w-full px-3 py-2 bg-neutral-secondary-medium border border-default-strong rounded-base shadow-xs`}
+    >
+      <div className="row-span-5 size-16 self-start rounded-base bg-neutral-quaternary md:row-span-1 md:self-center" />
+      {/* Nome */}
+      <div className="flex h-7 items-center">
+        <div className={`${barClassName} h-3.5 w-3/4 max-w-56`} />
+      </div>
+      {/* Categoria, carro e posição */}
+      <div className={cellClassName}>
+        <div className={`${barClassName} h-2 w-2/3 max-w-32`} />
+      </div>
+      <div className={cellClassName}>
+        <div className={`${barClassName} h-2 w-3/4 max-w-48`} />
+      </div>
+      <div className={cellClassName}>
+        <div className={`${barClassName} h-2 w-2/3 max-w-28`} />
+      </div>
+      {/* Preço */}
+      <div className={`${cellClassName} h-6`}>
+        <div className={`${barClassName} h-3 w-20`} />
+      </div>
+      {/* Status */}
+      <div className="col-start-3 row-start-1 flex justify-end self-start md:col-start-auto md:row-start-auto md:self-center">
+        <div className={`${barClassName} h-5 w-16`} />
       </div>
     </div>
   )
